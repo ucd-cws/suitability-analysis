@@ -1,2 +1,5 @@
 *.iml
 .idea/*
+*.pyc
+*.pyc
+FloodMitigation/__pycache__/settings.cpython-34.pyc
