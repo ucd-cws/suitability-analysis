@@ -1,6 +1,7 @@
 __author__ = 'nickrsan'
 
 import arcpy
+import tempfile
 
 from code_library.common import geospatial
 
@@ -8,10 +9,11 @@ from code_library.common import geospatial
 def filter_small_patches(raster_dataset, patch_area=9000, area_length_ratio=4, filter_value=0):
 	"""
 		Given a boolean 0/1 raster, filters out patches that are either too small, or which are not compact
-	:param raster_layer:
-	:param patch_area:
-	:param area_length_ratio:
-	:return:
+	:param raster_dataset: An ArcGIS compatible raster dataset
+	:param patch_area: The minimum area to keep a patch, in square units of the raster's projection. Patches smaller than this will be removed.
+	:param area_length_ratio: The ratio of area to perimeter (Area/Perimeter) under which patches will be removed.
+	:param filter_value: The value in the grid which will be kept - other grid features will be removed.
+	:return: Feature class converted from raster with patches removed when they don't match the filter_value, or when they are smaller than patch_area, or when their area to perimeter ratio is smaller than specified.
 	"""
 	# confirm we have a raster layer
 	desc = arcpy.Describe(raster_dataset)
@@ -22,6 +24,7 @@ def filter_small_patches(raster_dataset, patch_area=9000, area_length_ratio=4, f
 
 	# convert raster to polygon
 	raster_poly = geospatial.generate_gdb_filename("fil", scratch=True)
+	#arcpy.env.scratchWorkspace = tempfile.mkdtemp("arcgis_scratch")
 	arcpy.RasterToPolygon_conversion(raster_dataset, raster_poly, False, raster_field="Value")
 
 	# remove polygons that we're not looking at (value == 1)
