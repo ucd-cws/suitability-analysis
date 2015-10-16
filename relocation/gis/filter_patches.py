@@ -1,7 +1,6 @@
 __author__ = 'nickrsan'
 
 import arcpy
-import tempfile
 
 from code_library.common import geospatial
 
@@ -24,8 +23,7 @@ def filter_small_patches(raster_dataset, patch_area=9000, area_length_ratio=4, f
 
 	# convert raster to polygon
 	raster_poly = geospatial.generate_gdb_filename("fil", scratch=True)
-	#arcpy.env.scratchWorkspace = tempfile.mkdtemp("arcgis_scratch")
-	arcpy.RasterToPolygon_conversion(raster_dataset, raster_poly, False, raster_field="Value")
+	arcpy.RasterToPolygon_conversion(raster_dataset, raster_poly, simplify=False, raster_field="Value")
 
 	# remove polygons that we're not looking at (value == 1)
 	working_layer = "working_layer"
