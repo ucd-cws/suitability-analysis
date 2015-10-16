@@ -5,6 +5,28 @@ import arcpy
 from code_library.common import geospatial
 
 
+def convert_and_filter_by_code(raster_dataset, filter_value=0):
+	"""
+		Given a raster and a grid value, it converts the raster to a polygon and filters out all values != to filter_value
+
+		TODO: This could be faster or more resource efficient if we use raster calculator to set all non-interesting pixels to Null first, then they just don't get converted?
+	:param raster_dataset: A raster dataset on disk
+	:param filter_value: the value to keep - Polygons resulting from all other values will be discarded.
+	:return: polygon feature class
+	"""
+	raster_poly = geospatial.generate_gdb_filename("fil", scratch=True)
+	arcpy.RasterToPolygon_conversion(raster_dataset, raster_poly, simplify=False, raster_field="Value")
+
+	# remove polygons that we're not looking at (value == 1)
+	working_layer = "working_layer"
+	arcpy.MakeFeatureLayer_management(raster_poly, working_layer, where_clause="gridcode = {0:s}".format(filter_value))  # load a feature layer and remove the polygons we're not interested in in a single step
+
+	final_poly = geospatial.generate_gdb_filename("polygon")
+	arcpy.CopyFeatures_management(working_layer, final_poly)
+
+	return final_poly
+
+
 def filter_small_patches(raster_dataset, patch_area=9000, area_length_ratio=4, filter_value=0):
 	"""
 		Given a boolean 0/1 raster, filters out patches that are either too small, or which are not compact
