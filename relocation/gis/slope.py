@@ -20,15 +20,22 @@ def process_local_slope(dem, max_slope, mask, return_type="polygon"):
 	arcpy.CheckOutExtension("Spatial")
 
 	arcpy.env.mask = mask
+	logger.info("Processing raster to slope")
 	slope_raster = arcpy.sa.Slope(dem, output_measurement="DEGREE")
+
+	logger.info("Thresholding raster")
 	threshold_raster = slope_raster < max_slope
 
 	raster_name = geospatial.generate_gdb_filename("slope_raster")
+
+	logger.info("Saving raster to disk")
 	threshold_raster.save(raster_name)
 
 	arcpy.CheckInExtension("Spatial")
 
 	if return_type == "polygon":
+
+		logger.info("Converting to polygons")
 		new_name = convert_and_filter_by_code(raster_name, filter_value=0)
 
 		return new_name
