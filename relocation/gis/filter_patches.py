@@ -14,8 +14,14 @@ def convert_and_filter_by_code(raster_dataset, filter_value=0):
 	:param filter_value: the value to keep - Polygons resulting from all other values will be discarded.
 	:return: polygon feature class
 	"""
+
+	arcpy.CheckOutExtension("Spatial")
+	null_raster = arcpy.sa.SetNull(raster_dataset, raster_dataset, where_clause="Value != {0:s}".format(filter_value))
+	raster_dataset = geospatial.generate_gdb_filename("raster")
+	null_raster.save(raster_dataset)
+
 	raster_poly = geospatial.generate_gdb_filename("fil", scratch=True)
-	arcpy.RasterToPolygon_conversion(raster_dataset, raster_poly, simplify=False, raster_field="Value")
+	arcpy.RasterToPolygon_conversion(null_raster, raster_poly, simplify=False, raster_field="Value")
 
 	# remove polygons that we're not looking at (value == 1)
 	working_layer = "working_layer"
@@ -24,6 +30,7 @@ def convert_and_filter_by_code(raster_dataset, filter_value=0):
 	final_poly = geospatial.generate_gdb_filename("polygon")
 	arcpy.CopyFeatures_management(working_layer, final_poly)
 
+	arcpy.CheckInExtension("Spatial")
 	return final_poly
 
 
