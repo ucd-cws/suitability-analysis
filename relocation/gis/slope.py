@@ -44,7 +44,7 @@ def process_local_slope(dem=None, slope=None, max_slope=30, mask=None, return_ty
 	if return_type.lower() == "polygon":
 
 		logger.info("Converting to polygons")
-		new_name = convert_and_filter_by_code(raster_name, filter_value=0)
+		new_name = convert_and_filter_by_code(raster_name, filter_value=1)
 
 		return new_name
 	elif return_type.lower() == "raster":
