@@ -27,9 +27,10 @@ def process_local_slope(dem=None, slope=None, max_slope=30, mask=None, return_ty
 	if not slope:
 		arcpy.env.mask = mask
 		logger.info("Processing raster to slope")
-		slope_raster = arcpy.sa.Slope(dem, output_measurement="DEGREE")
+		mask_raster = arcpy.sa.ExtractByMask(dem, mask)  # mask environment variable hasn't been working - force extraction
+		slope_raster = arcpy.sa.Slope(mask_raster, output_measurement="DEGREE")
 	else:
-		slope_raster = arcpy.sa.Raster(slope)
+		slope_raster = arcpy.sa.ExtractByMask(slope, mask)  # mask environment variable hasn't been working - force extraction
 
 	logger.info("Thresholding raster")
 	threshold_raster = slope_raster < max_slope
