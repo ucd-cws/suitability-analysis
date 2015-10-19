@@ -41,13 +41,13 @@ def process_local_slope(dem=None, slope=None, max_slope=30, mask=None, return_ty
 
 	arcpy.CheckInExtension("Spatial")
 
-	if return_type == "polygon":
+	if return_type.lower() == "polygon":
 
 		logger.info("Converting to polygons")
 		new_name = convert_and_filter_by_code(raster_name, filter_value=0)
 
 		return new_name
-	elif return_type == "raster":
+	elif return_type.lower() == "raster":
 		return raster_name
 	else:
 		raise ValueError("Invalid parameter for return_type. Must be either \"raster\" or \"polygon\"")

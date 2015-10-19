@@ -16,7 +16,7 @@ def convert_and_filter_by_code(raster_dataset, filter_value=0):
 	"""
 
 	arcpy.CheckOutExtension("Spatial")
-	null_raster = arcpy.sa.SetNull(raster_dataset, raster_dataset, where_clause="Value != {0:s}".format(str(filter_value)))
+	null_raster = arcpy.sa.SetNull(raster_dataset, raster_dataset, where_clause="Value <> {0:s}".format(str(filter_value)))
 	raster_dataset = geospatial.generate_gdb_filename("raster")
 	null_raster.save(raster_dataset)
 
