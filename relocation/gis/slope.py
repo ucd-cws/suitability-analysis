@@ -8,20 +8,28 @@ from relocation.gis.filter_patches import convert_and_filter_by_code
 logger = logging.getLogger("relocation.suitability.processing")
 
 
-def process_local_slope(dem, max_slope, mask, return_type="polygon"):
+def process_local_slope(dem=None, slope=None, max_slope=30, mask=None, return_type="polygon"):
 	"""
 
 	:param dem: The DEM to process
+	:param slope: If slope is already processed, use this instead.
 	:param max_slope: The maximum slope in degrees that will be considered suitable for building
 	:param mask: A polygon or raster mask to use as the processing area (arcpy.env.mask/Analysis Mask environment)
 	:param return_type: whether to return a polygon feature class or a raster. Default is polygon, where raster will be processed to polygon automatically. Options are "polygon" or "raster"
 	:return:
 	"""
+
+	if not dem and not slope:
+		raise ValueError("Must provide either a slope raster or a DEM raster. Either parameter 'dem' or parameter 'slope' must be defined.")
+
 	arcpy.CheckOutExtension("Spatial")
 
-	arcpy.env.mask = mask
-	logger.info("Processing raster to slope")
-	slope_raster = arcpy.sa.Slope(dem, output_measurement="DEGREE")
+	if not slope:
+		arcpy.env.mask = mask
+		logger.info("Processing raster to slope")
+		slope_raster = arcpy.sa.Slope(dem, output_measurement="DEGREE")
+	else:
+		slope_raster = arcpy.sa.Raster(slope)
 
 	logger.info("Thresholding raster")
 	threshold_raster = slope_raster < max_slope
