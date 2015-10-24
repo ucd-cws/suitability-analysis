@@ -13,24 +13,32 @@ import arcpy
 
 from code_library.common.geospatial import generate_gdb_filename
 
+from relocation import gis
 from relocation.gis import slope
 from relocation.gis import protected_areas
 from relocation.gis import merge
 
-from FloodMitigation.settings import GEOSPATIAL_DIRECTORY
+from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY
 
-MERGE_CHOICES = ("INTERSECT", "ERASE")
+MERGE_CHOICES = (("IN","INTERSECT"),("ER", "ERASE"))
 
 
 class Region(models.Model):
 	name = models.CharField()
 	short_name = models.CharField(unique=True)
-	dem = models.FileField()
-	slope = models.FileField()
 
+	base_directory = models.FilePathField()
+	layers = models.FilePathField()
+
+	dem = models.FilePathField()
+	slope = models.FilePathField()
+
+	def setup(self):
+		self.base_directory, self.layers = gis.create_working_directories(REGIONS_DIRECTORY, self.short_name)
+		self.save()
 
 class Location(models.Model):
-	name = models.CharField()
+	name = models.CharField(max_length=255)
 	boundary_polygon = models.FilePathField()
 	search_distance = models.IntegerField(default=25000)  # meters
 	search_area = models.FilePathField()  # storage for boundary_polygon buffered by search_distance
@@ -41,11 +49,9 @@ class Constraint(models.Model):
 
 	"""
 	enabled = models.BooleanField(default=True)
-	name = models.TextField(max_length=255)
+	name = models.CharField(max_length=31)
 	description = models.TextField()
 	has_run = models.BooleanField(default=False)
-
-	merge_type = models.CharField(choices=MERGE_CHOICES)
 
 	def run(self, workspace):
 
@@ -56,37 +62,25 @@ class Constraint(models.Model):
 
 class SlopeConstraint(Constraint):
 	function = slope.process_local_slope
-	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES)
+	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
 
 
 class SuitabilityAnalysis(models.Model):
 	location = models.ForeignKey(Location)
 	constraints = models.ManyToManyField(Constraint)
-	result = models.FileField()
+	result = models.FilePathField()
 
 	working_directory = models.FilePathField()
 	workspace = models.FilePathField()
 
 	def setup(self):
-
-		gdb_name = "layers.gdb"
-		folder_name = self.location.region.short_name
-		self.working_directory = os.path.join(GEOSPATIAL_DIRECTORY, folder_name)
-
-		if os.path.exists(self.working_directory):
-			processing_log.warning("processing directory for project already exists - deleting!")
-			shutil.rmtree(self.working_directory)
-
-		os.mkdir(self.working_directory)
-		arcpy.CreateFileGDB_management(self.working_directory, gdb_name)
-		self.workspace = os.path.join(self.working_directory, gdb_name)
-
+		self.working_directory, self.workspace = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
 		self.save()
 
 	def merge(self):
 		suitable_areas = self.location.search_area
 		for constraint in self.constraints.all():
-			if not constraint.has_run:
+			if not constraint.has_run:  # basically, is the constraint ready to merge? We need to preprocess some of them
 				constraint.run(workspace=self.workspace)  # run constraint
 
 			suitable_areas = merge.merge(suitable_areas, constraint.layer, self.workspace, constraint.merge_type)
