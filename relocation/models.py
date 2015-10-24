@@ -48,7 +48,10 @@ class Constraint(models.Model):
 	merge_type = models.CharField(choices=MERGE_CHOICES)
 
 	def run(self, workspace):
+
+
 		self.has_run = True
+		self.save()
 
 
 class SlopeConstraint(Constraint):
@@ -87,5 +90,3 @@ class SuitabilityAnalysis(models.Model):
 				constraint.run(workspace=self.workspace)  # run constraint
 
 			suitable_areas = merge.merge(suitable_areas, constraint.layer, self.workspace, constraint.merge_type)
-
-			pass
