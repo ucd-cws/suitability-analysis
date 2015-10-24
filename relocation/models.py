@@ -24,8 +24,8 @@ MERGE_CHOICES = (("IN","INTERSECT"),("ER", "ERASE"))
 
 
 class Region(models.Model):
-	name = models.CharField()
-	short_name = models.CharField(unique=True)
+	name = models.CharField(max_length=255)
+	short_name = models.CharField(unique=True, max_length=255)
 
 	base_directory = models.FilePathField()
 	layers = models.FilePathField()
@@ -54,8 +54,6 @@ class Constraint(models.Model):
 	has_run = models.BooleanField(default=False)
 
 	def run(self, workspace):
-
-
 		self.has_run = True
 		self.save()
 
