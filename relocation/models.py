@@ -8,6 +8,7 @@ import shutil
 
 # Get an instance of a logger
 processing_log = logging.getLogger("processing_log")
+geoprocessing_log = logging.getLogger("geoprocessing")
 
 import arcpy
 
@@ -24,8 +25,8 @@ MERGE_CHOICES = (("IN", "INTERSECT"), ("ER", "ERASE"))
 
 
 class Region(models.Model):
-	name = models.CharField(max_length=255)
-	short_name = models.CharField(unique=True, max_length=255)
+	name = models.CharField(max_length=255, blank=False, null=False)
+	short_name = models.CharField(unique=True, max_length=255, blank=False, null=False)
 
 	base_directory = models.FilePathField()
 	layers = models.FilePathField()
@@ -38,12 +39,24 @@ class Region(models.Model):
 		self.base_directory, self.layers = gis.create_working_directories(REGIONS_DIRECTORY, self.short_name)
 		self.save()
 
+
 class Location(models.Model):
 	name = models.CharField(max_length=255)
-	boundary_polygon = models.FilePathField()
+	boundary_polygon = models.FilePathField(blank=False, null=False)
+
 	search_distance = models.IntegerField(default=25000)  # meters
 	search_area = models.FilePathField()  # storage for boundary_polygon buffered by search_distance
 
+	def setup(self):
+		"""
+			setup must be run first on Suitability Analysis object!
+		"""
+		if self.search_area is None:
+			self.search_area = generate_gdb_filename("search_area", gdb=self.suitability_analysis.workspace)
+			geoprocessing_log.info("Running buffer or area boundary to find search area")
+			arcpy.Buffer_analysis(self.boundary_polygon, self.search_area, self.search_distance)
+
+			self.save()
 
 class Constraint(models.Model):
 	"""
@@ -65,7 +78,7 @@ class SlopeConstraint(Constraint):
 
 
 class SuitabilityAnalysis(models.Model):
-	location = models.ForeignKey(Location)
+	location = models.ForeignKey(Location, related_name="suitability_analysis")
 	constraints = models.ManyToManyField(Constraint)
 	result = models.FilePathField()
 

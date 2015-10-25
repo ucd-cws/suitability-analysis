@@ -23,13 +23,13 @@ def make_road_mask(tiger_lines, census_places, search_area):
 
 	# calculate buffer by distances
 	code_block = """def calc_distance(r_type):
-  		if r_type == "S1100":  # highways, or so
-    		return 128  # 3x cell size (30m) * sqrt(2) to capture diagonals
-  		elif r_type == "S1200":  # major roadways
-    		return 85  # 2x cell size (30m) * sqrt(2) to capture diagonals
-  		else:  #other
-    		return 43  # cell size (30m) * sqrt(2) to capture diagonals
-    """
+		if r_type == "S1100":  # highways, or so
+			return 128  # 3x cell size (30m) * sqrt(2) to capture diagonals
+		elif r_type == "S1200":  # major roadways
+			return 85  # 2x cell size (30m) * sqrt(2) to capture diagonals
+		else:  #other
+			return 43  # cell size (30m) * sqrt(2) to capture diagonals
+	"""
 	arcpy.CalculateField_management(tiger_clip, field_name, "calc_distance(!MTFCC!)", "PYTHON_9.3", code_block)
 
 	# run buffer on lines
@@ -49,6 +49,7 @@ def make_road_mask(tiger_lines, census_places, search_area):
 def land_use(nlcd_layer, search_area, tiger_lines, census_places):
 	arcpy.CheckOutExtension("spatial")
 
+	geoprocessing_log.info("Extracting NLCD raster to search area")
 	nlcd_in_area = arcpy.sa.ExtractByMask(nlcd_layer, search_area)
 	thresholded_raster = nlcd_in_area > 24 | nlcd_in_area == 21  # TODO: find a way to make this a parameter - an explicit list of banned values?
 
