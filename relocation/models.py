@@ -20,7 +20,7 @@ from relocation.gis import merge
 
 from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY
 
-MERGE_CHOICES = (("IN","INTERSECT"),("ER", "ERASE"))
+MERGE_CHOICES = (("IN", "INTERSECT"), ("ER", "ERASE"))
 
 
 class Region(models.Model):
@@ -32,6 +32,7 @@ class Region(models.Model):
 
 	dem = models.FilePathField()
 	slope = models.FilePathField()
+	census_places = models.FilePathField()
 
 	def setup(self):
 		self.base_directory, self.layers = gis.create_working_directories(REGIONS_DIRECTORY, self.short_name)
