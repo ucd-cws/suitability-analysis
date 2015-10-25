@@ -35,7 +35,9 @@ class Region(models.Model):
 	base_directory = models.FilePathField()
 	layers = models.FilePathField()
 
-	# I was going to make it so all of these are required, but you could conceivably want to set up a region where some of these aren't needed and they just aren't available. Available constraint validation should occur when adding a constraint
+	# I was going to make it so all of these are required, but you could conceivably want to set up a region where
+	# some of these aren't needed and they just aren't available. Available constraint validation should occur
+	# when adding a constraint
 	dem = models.FilePathField()
 	slope = models.FilePathField()
 	nlcd = models.FilePathField()
@@ -87,7 +89,10 @@ class LocalSlopeConstraint(Constraint):
 
 	def run(self):
 		processing_log.info("Running Local Slope Constraint")
-		self.polygon_layer = slope.process_local_slope(slope=self.suitability_analysis.location.region.slope, max_slope=30, mask=self.suitability_analysis.location.search_area, return_type="polygon")
+		self.polygon_layer = slope.process_local_slope(slope=self.suitability_analysis.location.region.slope,
+														max_slope=30,
+														mask=self.suitability_analysis.location.search_area,
+														return_type="polygon")
 
 		self.has_run = True
 		self.save()
