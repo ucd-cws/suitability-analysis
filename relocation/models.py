@@ -18,6 +18,9 @@ from relocation import gis
 from relocation.gis import slope
 from relocation.gis import protected_areas
 from relocation.gis import merge
+from relocation.gis import floodplain_areas
+from relocation.gis import census_places
+from relocation.gis import land_use
 
 from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY
 
@@ -32,9 +35,14 @@ class Region(models.Model):
 	base_directory = models.FilePathField()
 	layers = models.FilePathField()
 
+	# I was going to make it so all of these are required, but you could conceivably want to set up a region where some of these aren't needed and they just aren't available. Available constraint validation should occur when adding a constraint
 	dem = models.FilePathField()
 	slope = models.FilePathField()
+	nlcd = models.FilePathField()
 	census_places = models.FilePathField()
+	protected_areas = models.FilePathField()
+	floodplain_areas = models.FilePathField()
+	tiger_lines = models.FilePathField()
 
 	def setup(self):
 		self.base_directory, self.layers = gis.create_working_directories(REGIONS_DIRECTORY, self.short_name)
@@ -73,14 +81,40 @@ class Constraint(models.Model):
 	has_run = models.BooleanField(default=False)
 
 
-class SlopeConstraint(Constraint):
-	function = slope.process_local_slope
+class LocalSlopeConstraint(Constraint):
 	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
 	max_slope = models.IntegerField(default=30)
 
 	def run(self):
-
+		processing_log.info("Running Local Slope Constraint")
 		self.polygon_layer = slope.process_local_slope(slope=self.suitability_analysis.location.region.slope, max_slope=30, mask=self.suitability_analysis.location.search_area, return_type="polygon")
+
+		self.has_run = True
+		self.save()
+
+
+class ProtectedAreasConstraint(Constraint):
+	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
+
+	def run(self):
+		processing_log.info("Running Protected Areas Constraint")
+		self.polygon_layer = protected_areas.protected_areas(self.suitability_analysis.location.region.protected_areas)
+
+		self.has_run = True
+		self.save()
+
+
+class LandUseConstraint(Constraint):
+	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
+
+	def run(self):
+		processing_log.info("Running Land Use Constraint")
+		self.polygon_layer = land_use.land_use(self.suitability_analysis.location.region.nlcd,
+													self.suitability_analysis.location.search_area,
+													self.suitability_analysis.location.region.tiger_lines,
+													self.suitability_analysis.location.region.census_places,
+													self.suitability_analysis.location.region.crs_string,
+													self.suitability_analysis.workspace)
 
 		self.has_run = True
 		self.save()
