@@ -27,6 +27,7 @@ MERGE_CHOICES = (("IN", "INTERSECT"), ("ER", "ERASE"))
 class Region(models.Model):
 	name = models.CharField(max_length=255, blank=False, null=False)
 	short_name = models.CharField(unique=True, max_length=255, blank=False, null=False)
+	crs_string = models.TextField(null=False, blank=False)
 
 	base_directory = models.FilePathField()
 	layers = models.FilePathField()
@@ -42,6 +43,7 @@ class Region(models.Model):
 
 class Location(models.Model):
 	name = models.CharField(max_length=255)
+	region = models.ForeignKey(Region, null=False)
 	boundary_polygon = models.FilePathField(blank=False, null=False)
 
 	search_distance = models.IntegerField(default=25000)  # meters
@@ -58,6 +60,7 @@ class Location(models.Model):
 
 			self.save()
 
+
 class Constraint(models.Model):
 	"""
 
@@ -65,21 +68,27 @@ class Constraint(models.Model):
 	enabled = models.BooleanField(default=True)
 	name = models.CharField(max_length=31)
 	description = models.TextField()
-	has_run = models.BooleanField(default=False)
 
-	def run(self, workspace):
-		self.has_run = True
-		self.save()
+	polygon_layer = models.FilePathField()
+	has_run = models.BooleanField(default=False)
 
 
 class SlopeConstraint(Constraint):
 	function = slope.process_local_slope
 	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
+	max_slope = models.IntegerField(default=30)
+
+	def run(self):
+
+		self.polygon_layer = slope.process_local_slope(slope=self.suitability_analysis.location.region.slope, max_slope=30, mask=self.suitability_analysis.location.search_area, return_type="polygon")
+
+		self.has_run = True
+		self.save()
 
 
 class SuitabilityAnalysis(models.Model):
 	location = models.ForeignKey(Location, related_name="suitability_analysis")
-	constraints = models.ManyToManyField(Constraint)
+	constraints = models.ManyToManyField(Constraint, related_name="suitability_analysis")
 	result = models.FilePathField()
 
 	working_directory = models.FilePathField()
