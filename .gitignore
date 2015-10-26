@@ -4,3 +4,7 @@
 *.pyc
 FloodMitigation/__pycache__/settings.cpython-34.pyc
 regions/*
+locations/*
+geospatial_analysis/*
+__pycache__/*
+*.pyc

@@ -17,6 +17,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 GEOSPATIAL_DIRECTORY = os.path.join(BASE_DIR, "geospatial_analysis")
 REGIONS_DIRECTORY = os.path.join(BASE_DIR, "regions")
+LOCATIONS_DIRECTORY = os.path.join(BASE_DIR, "locations")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
