@@ -125,6 +125,28 @@ class LandUseConstraint(Constraint):
 		self.save()
 
 
+class FloodplainAreas(Constraint):
+	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
+
+	def run(self):
+		processing_log.info("Running Floodplain Areas Constraint")
+		self.polygon_layer = floodplain_areas.floodplain_areas(self.suitability_analysis.location.region.floodplain_areas)
+
+		self.has_run = True
+		self.save()
+
+
+class CensusPlaces(Constraint):
+	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
+
+	def run(self):
+		processing_log.info("Running Floodplain Areas Constraint")
+		self.polygon_layer = census_places.census_places(self.suitability_analysis.location.region.floodplain_areas)
+
+		self.has_run = True
+		self.save()
+
+
 class SuitabilityAnalysis(models.Model):
 	location = models.ForeignKey(Location, related_name="suitability_analysis")
 	constraints = models.ManyToManyField(Constraint, related_name="suitability_analysis")
