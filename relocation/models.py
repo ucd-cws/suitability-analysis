@@ -29,30 +29,64 @@ MERGE_CHOICES = (("IN", "INTERSECT"), ("ER", "ERASE"))
 
 class Region(models.Model):
 	name = models.CharField(max_length=255, blank=False, null=False)
-	short_name = models.CharField(unique=True, max_length=255, blank=False, null=False)
+	short_name = models.SlugField(blank=False, null=False)
 	crs_string = models.TextField(null=False, blank=False)
 
-	base_directory = models.FilePathField()
-	layers = models.FilePathField()
+	base_directory = models.FilePathField(path=REGIONS_DIRECTORY, max_length=255, allow_folders=True, allow_files=False)
+	layers = models.FilePathField(path=REGIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
 
 	# I was going to make it so all of these are required, but you could conceivably want to set up a region where
 	# some of these aren't needed and they just aren't available. Available constraint validation should occur
 	# when adding a constraint
+	dem_name = models.CharField(max_length=255, )
 	dem = models.FilePathField()
+	slope_name = models.CharField(max_length=255, )
 	slope = models.FilePathField()
+	nlcd_name = models.CharField(max_length=255, )
 	nlcd = models.FilePathField()
+	census_places_name = models.CharField(max_length=255, )
 	census_places = models.FilePathField()
+	protected_areas_name = models.CharField(max_length=255, )
 	protected_areas = models.FilePathField()
+	floodplain_areas_name = models.CharField(max_length=255, )
 	floodplain_areas = models.FilePathField()
+	tiger_lines_name = models.CharField(max_length=255, )
 	tiger_lines = models.FilePathField()
 
 	def setup(self):
-		self.base_directory, self.layers = gis.create_working_directories(REGIONS_DIRECTORY, self.short_name)
+		#if not (self.base_directory and self.layers):
+		#	self.base_directory, self.layers = gis.create_working_directories(REGIONS_DIRECTORY, self.short_name)
+
+		self.dem = os.path.join(str(self.layers), self.dem_name)
+		self.slope = os.path.join(str(self.layers), self.slope_name)
+		self.nlcd = os.path.join(str(self.layers), self.nlcd_name)
+		self.census_places = os.path.join(str(self.layers), self.census_places_name)
+		self.protected_areas = os.path.join(str(self.layers), self.protected_areas_name)
+		self.floodplain_areas = os.path.join(str(self.layers), self.floodplain_areas_name)
+		self.tiger_lines = os.path.join(str(self.layers), self.tiger_lines_name)
 		self.save()
+
+	def get_layer_names(self):
+		"""
+			gets a list of layer names to be our options when selecting layers for the region
+		:return:
+		"""
+		original_workspace = arcpy.env.workspace
+
+		arcpy.env.workspace = self.layers
+
+		feature_classes = arcpy.ListFeatureClasses()
+		rasters = arcpy.ListRasters()
+		layers = feature_classes + rasters
+
+		arcpy.env.workspace = original_workspace
+
+		return layers
 
 
 class Location(models.Model):
 	name = models.CharField(max_length=255)
+	short_name = models.SlugField(blank=False, null=False)
 	region = models.ForeignKey(Region, null=False)
 	boundary_polygon = models.FilePathField(blank=False, null=False)
 
@@ -125,7 +159,7 @@ class LandUseConstraint(Constraint):
 		self.save()
 
 
-class FloodplainAreas(Constraint):
+class FloodplainAreasConstraint(Constraint):
 	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
 
 	def run(self):
@@ -136,7 +170,7 @@ class FloodplainAreas(Constraint):
 		self.save()
 
 
-class CensusPlaces(Constraint):
+class CensusPlacesConstraint(Constraint):
 	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
 
 	def run(self):
@@ -148,12 +182,15 @@ class CensusPlaces(Constraint):
 
 
 class SuitabilityAnalysis(models.Model):
+	name = models.CharField(max_length=255, blank=False, null=False)
+	short_name = models.SlugField(blank=False, null=False)
+
 	location = models.ForeignKey(Location, related_name="suitability_analysis")
 	constraints = models.ManyToManyField(Constraint, related_name="suitability_analysis")
 	result = models.FilePathField()
 
-	working_directory = models.FilePathField()
-	workspace = models.FilePathField()
+	working_directory = models.FilePathField(path=GEOSPATIAL_DIRECTORY, max_length=255, allow_folders=True, allow_files=False)
+	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
 
 	def setup(self):
 		self.working_directory, self.workspace = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
