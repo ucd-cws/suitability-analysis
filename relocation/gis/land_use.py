@@ -65,7 +65,12 @@ def land_use(nlcd_layer, search_area, tiger_lines, census_places, crs, workspace
 	roads_mask = make_road_mask(tiger_lines, census_places=census_places, search_area=search_area)
 	roads_raster = generate_gdb_filename("roads_raster")
 	geoprocessing_log.info("Converting roads mask to raster")
-	arcpy.PolygonToRaster_conversion(roads_mask, "OBJECTID", roads_raster, "CELL_CENTER", cellsize=nlcd_in_area)
+	try:
+		arcpy.PolygonToRaster_conversion(roads_mask, "OBJECTID", roads_raster, "CELL_CENTER", cellsize=nlcd_in_area)
+		arcpy.CalculateStatistics_management(roads_raster)  # crashes for invalid statistics unless we run this after the conversion
+	except:
+		geoprocessing_log.error("Error creating raster: {0:s}".format(roads_raster))
+		raise
 
 	# Raster Calculations
 	final_nlcd = arcpy.sa.Con(arcpy.sa.IsNull(arcpy.sa.Raster(roads_raster)), thresholded_raster, 1)

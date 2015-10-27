@@ -307,7 +307,7 @@ class CensusPlacesConstraint(Constraint):
 
 	def run(self):
 		processing_log.info("Running Floodplain Areas Constraint")
-		self.polygon_layer = census_places.census_places(self.suitability_analysis.location.region.floodplain_areas)
+		self.polygon_layer = census_places.census_places(self.suitability_analysis.location.region.census_places)
 
 		self.has_run = True
 		self.save()
