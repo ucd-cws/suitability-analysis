@@ -27,35 +27,35 @@ from relocation.gis import land_use
 
 from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
 
-MERGE_CHOICES = (("IN", "INTERSECT"), ("ER", "ERASE"))
+MERGE_CHOICES = (("INTERSECT", "INTERSECT"), ("ERASE", "ERASE"))
 
 
 class InheritanceCastModel(models.Model):
-    """
+	"""
 	
 	Model from http://stackoverflow.com/a/929982/587938 - used to obtain subclass object using parent class/relationship
 	
-    An abstract base class that provides a ``real_type`` FK to ContentType.
+	An abstract base class that provides a ``real_type`` FK to ContentType.
 
-    For use in trees of inherited models, to be able to downcast
-    parent instances to their child types.
+	For use in trees of inherited models, to be able to downcast
+	parent instances to their child types.
 
-    """
-    real_type = models.ForeignKey(ContentType, editable=False)
+	"""
+	real_type = models.ForeignKey(ContentType, editable=False)
 
-    def save(self, *args, **kwargs):
-        if not self.id:
-            self.real_type = self._get_real_type()
-        super(InheritanceCastModel, self).save(*args, **kwargs)
+	def save(self, *args, **kwargs):
+		if not self.id:
+			self.real_type = self._get_real_type()
+		super(InheritanceCastModel, self).save(*args, **kwargs)
 
-    def _get_real_type(self):
-        return ContentType.objects.get_for_model(type(self))
+	def _get_real_type(self):
+		return ContentType.objects.get_for_model(type(self))
 
-    def cast(self):
-        return self.real_type.get_object_for_this_type(pk=self.pk)
+	def cast(self):
+		return self.real_type.get_object_for_this_type(pk=self.pk)
 
-    class Meta:
-        abstract = True
+	class Meta:
+		abstract = True
 
 
 class Region(models.Model):
@@ -97,6 +97,10 @@ class Region(models.Model):
 		self.tiger_lines = os.path.join(str(self.layers), self.tiger_lines_name)
 		self.save()
 
+	def clean_working(self):
+		pass
+		# TODO: Make a function that cleans the layers that have been generated out, and resets the has_run and paths on the constraints
+
 	def get_layer_names(self):
 		"""
 			gets a list of layer names to be our options when selecting layers for the region
@@ -122,7 +126,13 @@ class Region(models.Model):
 
 
 class SuitabilityAnalysisForm(forms.ModelForm):
-	dem = models.forms.ChoiceField()
+	dem = forms.ChoiceField()
+	slope = forms.ChoiceField()
+	nlcd = forms.ChoiceField()
+	census_places = forms.ChoiceField()
+	protected_areas = forms.ChoiceField()
+	floodplain_areas = forms.ChoiceField()
+	tiger_lines = forms.ChoiceField()
 
 	def __init__(self, *args, **kwargs):
 		super(SuitabilityAnalysisForm, self).__init__(*args, **kwargs)
@@ -196,9 +206,9 @@ class SuitabilityAnalysis(models.Model):
 			if not full_constraint.enabled:
 				continue
 			if not full_constraint.has_run:  # basically, is the constraint ready to merge? We need to preprocess some of them
-				full_constraint.run(workspace=self.workspace)  # run constraint
+				full_constraint.run()  # run constraint
 
-			suitable_areas = merge.merge(suitable_areas, full_constraint.layer, self.workspace, full_constraint.merge_type)
+			suitable_areas = merge.merge(suitable_areas, full_constraint.polygon_layer, self.workspace, full_constraint.merge_type)
 
 		self.result = suitable_areas
 		self.save()

@@ -25,6 +25,6 @@ def merge(existing_areas, change_areas, workspace, method="ERASE"):
 		arcpy.Erase_analysis(existing_areas, change_areas, new_features)
 	elif method == "INTERSECT":
 		geoprocessing_log.info("Intersecting features")
-		arcpy.Intersect_analysis(existing_areas, change_areas)
+		arcpy.Intersect_analysis(existing_areas, change_areas, new_features)
 
 	return new_features
