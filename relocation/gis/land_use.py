@@ -49,12 +49,13 @@ def make_road_mask(tiger_lines, census_places, search_area):
 	return road_mask
 
 
-def land_use(nlcd_layer, search_area, tiger_lines, census_places, crs, workspace):
+def land_use(nlcd_layer, search_area, excluded_types, tiger_lines, census_places, crs, workspace):
 	arcpy.CheckOutExtension("spatial")
 
 	geoprocessing_log.info("Extracting NLCD raster to search area")
 	nlcd_in_area = arcpy.sa.ExtractByMask(nlcd_layer, search_area)
-	thresholded_raster = arcpy.sa.Con((nlcd_in_area > 24) | (nlcd_in_area == 21), 1, 0)  # TODO: find a way to make this a parameter - an explicit list of banned values?
+	avoid_types = [exclude.value for exclude in excluded_types]
+	thresholded_raster = arcpy.sa.Con(nlcd_in_area not in avoid_types, 1, 0)
 
 	scratch_raster = generate_gdb_filename("temp_raster", scratch=True)
 	thresholded_raster.save(scratch_raster)  # save it so we can use it for environment variables
@@ -69,7 +70,7 @@ def land_use(nlcd_layer, search_area, tiger_lines, census_places, crs, workspace
 	roads_raster = generate_gdb_filename("roads_raster")
 	geoprocessing_log.info("Converting roads mask to raster")
 	try:
-		arcpy.FeatureToRaster_conversion(roads_mask, "OBJECTID", roads_raster)
+		arcpy.PolygonToRaster_conversion(roads_mask, "OBJECTID", roads_raster)
 		#arcpy.CalculateStatistics_management(roads_raster)  # crashes for invalid statistics unless we run this after the conversion
 	except:
 		geoprocessing_log.error("Error creating raster: {0:s} - from roads mask: {1:s}".format(roads_raster, roads_mask))

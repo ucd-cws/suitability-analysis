@@ -29,6 +29,28 @@ from relocation.gis import land_use
 from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
 
 MERGE_CHOICES = (("INTERSECT", "INTERSECT"), ("ERASE", "ERASE"))
+LAND_USE_CHOICES = (
+	(11, "11 - Open Water"),
+	(12, "12 - Perennial Ice/Snow"),
+	(21, "21 - Developed, Open Space"),
+	(22, "22 - Developed, Low Intensity"),
+	(23, "23 - Developed, Medium Intensity "),
+	(24, "24 - Developed, High Intensity "),
+	(31, "31 - Barren Land (Rock/Sand/Clay)"),
+	(41, "41 - Deciduous Forest"),
+	(42, "42 - Evergreen Forest"),
+	(43, "43 - Mixed Forest"),
+	(51, "51 - Dwarf Scrub"),
+	(52, "52 - Shrub/Scrub"),
+	(71, "71 - Grassland/Herbaceous"),
+	(72, "72 - Sedge/Herbaceous"),
+	(73, "73 - Lichens"),
+	(74, "74 - Moss"),
+	(81, "81 - Pasture/Hay"),
+	(82, "82 - Cultivated Crops"),
+	(90, "90 - Woody Wetlands"),
+	(95, "95 - Emergent Herbaceous Wetlands ")
+)
 
 
 class InheritanceCastModel(models.Model):
@@ -71,19 +93,19 @@ class Region(models.Model):
 	# some of these aren't needed and they just aren't available. Available constraint validation should occur
 	# when adding a constraint
 	dem_name = models.CharField(max_length=255, )
-	dem = models.FilePathField(null=True, blank=True)
+	dem = models.FilePathField(null=True, blank=True, editable=False)
 	slope_name = models.CharField(max_length=255, )
-	slope = models.FilePathField(null=True, blank=True)
+	slope = models.FilePathField(null=True, blank=True, editable=False)
 	nlcd_name = models.CharField(max_length=255, )
-	nlcd = models.FilePathField(null=True, blank=True)
+	nlcd = models.FilePathField(null=True, blank=True, editable=False)
 	census_places_name = models.CharField(max_length=255, )
-	census_places = models.FilePathField(null=True, blank=True)
+	census_places = models.FilePathField(null=True, blank=True, editable=False)
 	protected_areas_name = models.CharField(max_length=255, )
-	protected_areas = models.FilePathField(null=True, blank=True)
+	protected_areas = models.FilePathField(null=True, blank=True, editable=False)
 	floodplain_areas_name = models.CharField(max_length=255, )
-	floodplain_areas = models.FilePathField(null=True, blank=True)
+	floodplain_areas = models.FilePathField(null=True, blank=True, editable=False)
 	tiger_lines_name = models.CharField(max_length=255, )
-	tiger_lines = models.FilePathField(null=True, blank=True)
+	tiger_lines = models.FilePathField(null=True, blank=True, editable=False)
 
 	def setup(self):
 		#if not (self.base_directory and self.layers):
@@ -162,10 +184,10 @@ class Location(models.Model):
 	layers = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
 
 	boundary_polygon_name = models.CharField(max_length=255)
-	boundary_polygon = models.FilePathField(null=True, blank=True, recursive=True, max_length=255, allow_folders=True, allow_files=False)
+	boundary_polygon = models.FilePathField(null=True, blank=True, recursive=True, max_length=255, allow_folders=True, allow_files=False, editable=False)
 
 	search_distance = models.IntegerField(default=25000)  # meters
-	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True)  # storage for boundary_polygon buffered by search_distance
+	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
 
 	def setup(self):
 		"""
@@ -214,6 +236,7 @@ class SuitabilityAnalysis(models.Model):
 					full_constraint.run()  # run constraint
 				except:
 					processing_log.error("Error running constraint for {0:s}. Processing will proceed to run other constraints and merge completed constraints. To incorporate this constraint, corrections to user paramters or code may be necessary. Python reported the following error: {1:s}".format(full_constraint.name, traceback.format_exc(3)))
+					continue  # don't try to merge if we couldn't create the layer
 
 			try:
 				suitable_areas = merge.merge(suitable_areas, full_constraint.polygon_layer, self.workspace, full_constraint.merge_type)
@@ -282,13 +305,19 @@ class ProtectedAreasConstraint(Constraint):
 		self.save()
 
 
+class LandCoverChoices(models.Model):
+	value = models.IntegerField(choices=LAND_USE_CHOICES)
+
+
 class LandUseConstraint(Constraint):
 	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
+	excluded_types = models.ManyToManyField(LandCoverChoices)
 
 	def run(self):
 		processing_log.info("Running Land Use Constraint")
 		self.polygon_layer = land_use.land_use(self.suitability_analysis.location.region.nlcd,
 													self.suitability_analysis.location.search_area,
+													self.excluded_types.objects.all(),
 													self.suitability_analysis.location.region.tiger_lines,
 													self.suitability_analysis.location.region.census_places,
 													self.suitability_analysis.location.region.crs_string,
