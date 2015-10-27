@@ -8,7 +8,7 @@ from relocation.gis.filter_patches import convert_and_filter_by_code
 logger = logging.getLogger("relocation.suitability.processing")
 
 
-def process_local_slope(dem=None, slope=None, max_slope=30, mask=None, return_type="polygon"):
+def process_local_slope(dem=None, slope=None, max_slope=30, mask=None, return_type="polygon", workspace=None):
 	"""
 
 	:param dem: The DEM to process
@@ -35,7 +35,7 @@ def process_local_slope(dem=None, slope=None, max_slope=30, mask=None, return_ty
 	logger.info("Thresholding raster")
 	threshold_raster = slope_raster < max_slope
 
-	raster_name = geospatial.generate_gdb_filename("slope_raster")
+	raster_name = geospatial.generate_gdb_filename("slope_raster", gdb=workspace)
 
 	logger.info("Saving raster to disk")
 	threshold_raster.save(raster_name)
@@ -46,6 +46,9 @@ def process_local_slope(dem=None, slope=None, max_slope=30, mask=None, return_ty
 
 		logger.info("Converting to polygons")
 		new_name = convert_and_filter_by_code(raster_name, filter_value=1)
+		
+		poly_name = geospatial.generate_gdb_filename("slope_polygon", gdb=workspace)
+		arcpy.CopyFeatures_management(new_name, poly_name)
 
 		return new_name
 	elif return_type.lower() == "raster":

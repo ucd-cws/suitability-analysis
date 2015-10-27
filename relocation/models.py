@@ -1,4 +1,7 @@
 from django.db import models
+from django import forms
+from django.contrib.contenttypes.models import ContentType
+from django.contrib import admin
 
 # Create your models here.
 
@@ -25,6 +28,34 @@ from relocation.gis import land_use
 from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
 
 MERGE_CHOICES = (("IN", "INTERSECT"), ("ER", "ERASE"))
+
+
+class InheritanceCastModel(models.Model):
+    """
+	
+	Model from http://stackoverflow.com/a/929982/587938 - used to obtain subclass object using parent class/relationship
+	
+    An abstract base class that provides a ``real_type`` FK to ContentType.
+
+    For use in trees of inherited models, to be able to downcast
+    parent instances to their child types.
+
+    """
+    real_type = models.ForeignKey(ContentType, editable=False)
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.real_type = self._get_real_type()
+        super(InheritanceCastModel, self).save(*args, **kwargs)
+
+    def _get_real_type(self):
+        return ContentType.objects.get_for_model(type(self))
+
+    def cast(self):
+        return self.real_type.get_object_for_this_type(pk=self.pk)
+
+    class Meta:
+        abstract = True
 
 
 class Region(models.Model):
@@ -90,16 +121,34 @@ class Region(models.Model):
 		return unicode(self.name)
 
 
+class SuitabilityAnalysisForm(forms.ModelForm):
+	dem = models.forms.ChoiceField()
+
+	def __init__(self, *args, **kwargs):
+		super(SuitabilityAnalysisForm, self).__init__(*args, **kwargs)
+		self.fields['dem'].choices = self.instance.get_layer_names()
+		self.fields['slope'].choices = self.fields['dem'].choices
+		self.fields['nlcd'].choices = self.fields['dem'].choices
+		self.fields['census_places'].choices = self.fields['dem'].choices
+		self.fields['protected_areas'].choices = self.fields['dem'].choices
+		self.fields['floodplain_areas'].choices = self.fields['dem'].choices
+		self.fields['tiger_lines'].choices = self.fields['dem'].choices
+
+
+class SuitabilityAnalysisAdmin(admin.ModelAdmin):
+	form = SuitabilityAnalysisForm
+
+
 class Location(models.Model):
 	name = models.CharField(max_length=255)
 	short_name = models.SlugField(blank=False, null=False)
 	region = models.ForeignKey(Region, null=False)
 
 	working_directory = models.FilePathField(path=LOCATIONS_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
-	layers = models.FilePathField(path=REGIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
+	layers = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
 
 	boundary_polygon_name = models.CharField(max_length=255)
-	boundary_polygon = models.FilePathField(recursive=True, max_length=255, allow_folders=True, allow_files=False)
+	boundary_polygon = models.FilePathField(null=True, blank=True, recursive=True, max_length=255, allow_folders=True, allow_files=False)
 
 	search_distance = models.IntegerField(default=25000)  # meters
 	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True)  # storage for boundary_polygon buffered by search_distance
@@ -108,14 +157,15 @@ class Location(models.Model):
 		"""
 			setup must be run first on Suitability Analysis object!
 		"""
-		if self.search_area is None:
+
+		self.boundary_polygon = os.path.join(str(self.layers), self.boundary_polygon_name)
+
+		if self.search_area is None or self.search_area == "":
 			self.search_area = generate_gdb_filename("search_area", gdb=self.suitability_analysis.workspace)
 			geoprocessing_log.info("Running buffer or area boundary to find search area")
 			arcpy.Buffer_analysis(self.boundary_polygon, self.search_area, self.search_distance)
 
-			self.boundary_polygon = os.path.join(str(self.layers), self.boundary_polygon_name)
-
-			self.save()
+		self.save()
 
 	def __str__(self):
 		return unicode(self.name)
@@ -124,7 +174,43 @@ class Location(models.Model):
 		return unicode(self.name)
 
 
-class Constraint(models.Model):
+class SuitabilityAnalysis(models.Model):
+	name = models.CharField(max_length=255, blank=False, null=False)
+	short_name = models.SlugField(blank=False, null=False)
+
+	location = models.OneToOneField(Location, related_name="suitability_analysis")
+	result = models.FilePathField(null=True, blank=True)
+
+	working_directory = models.FilePathField(path=GEOSPATIAL_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
+	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
+
+	def setup(self):
+		self.working_directory, self.workspace = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
+		self.save()
+
+	def merge(self):
+		suitable_areas = self.location.search_area
+		for constraint in self.constraints.all():
+			full_constraint = constraint.cast()  # get the subobject
+			
+			if not full_constraint.enabled:
+				continue
+			if not full_constraint.has_run:  # basically, is the constraint ready to merge? We need to preprocess some of them
+				full_constraint.run(workspace=self.workspace)  # run constraint
+
+			suitable_areas = merge.merge(suitable_areas, full_constraint.layer, self.workspace, full_constraint.merge_type)
+
+		self.result = suitable_areas
+		self.save()
+
+	def __str__(self):
+		return unicode(self.name)
+
+	def __unicode__(self):
+		return unicode(self.name)
+
+
+class Constraint(InheritanceCastModel):
 	"""
 
 	"""
@@ -132,12 +218,26 @@ class Constraint(models.Model):
 	name = models.CharField(max_length=31)
 	description = models.TextField()
 
-	polygon_layer = models.FilePathField()
+	polygon_layer = models.FilePathField(null=True, blank=True)
 	has_run = models.BooleanField(default=False)
 
+	suitability_analysis = models.ForeignKey(SuitabilityAnalysis, related_name="constraints")
+
+	def rerun(self):
+		"""
+			Force it to run again
+		"""
+		self.has_run = False
+		self.run()
+	
+	def __str__(self):
+		return unicode(self.name)
+
+	def __unicode__(self):
+		return unicode(self.name)
 
 class LocalSlopeConstraint(Constraint):
-	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
+	merge_type = models.CharField(default="INTERSECT", choices=MERGE_CHOICES, max_length=255)  # it comes out with places of acceptable slope
 	max_slope = models.IntegerField(default=30)
 
 	def run(self):
@@ -145,7 +245,7 @@ class LocalSlopeConstraint(Constraint):
 		self.polygon_layer = slope.process_local_slope(slope=self.suitability_analysis.location.region.slope,
 														max_slope=30,
 														mask=self.suitability_analysis.location.search_area,
-														return_type="polygon")
+														return_type="polygon", workspace=self.suitability_analysis.workspace)
 
 		self.has_run = True
 		self.save()
@@ -198,37 +298,3 @@ class CensusPlacesConstraint(Constraint):
 
 		self.has_run = True
 		self.save()
-
-
-class SuitabilityAnalysis(models.Model):
-	name = models.CharField(max_length=255, blank=False, null=False)
-	short_name = models.SlugField(blank=False, null=False)
-
-	location = models.ForeignKey(Location, related_name="suitability_analysis")
-	constraints = models.ManyToManyField(Constraint, related_name="suitability_analysis")
-	result = models.FilePathField(null=True, blank=True)
-
-	working_directory = models.FilePathField(path=GEOSPATIAL_DIRECTORY, max_length=255, allow_folders=True, allow_files=False)
-	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
-
-	def setup(self):
-		self.working_directory, self.workspace = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
-		self.save()
-
-	def merge(self):
-		suitable_areas = self.location.search_area
-		for constraint in self.constraints.all():
-			if not constraint.has_run:  # basically, is the constraint ready to merge? We need to preprocess some of them
-				constraint.run(workspace=self.workspace)  # run constraint
-
-			suitable_areas = merge.merge(suitable_areas, constraint.layer, self.workspace, constraint.merge_type)
-
-		self.result = suitable_areas
-		self.save()
-
-	def __str__(self):
-		return unicode(self.name)
-
-	def __unicode__(self):
-		return unicode(self.name)
-
