@@ -54,7 +54,7 @@ def land_use(nlcd_layer, search_area, tiger_lines, census_places, crs, workspace
 
 	geoprocessing_log.info("Extracting NLCD raster to search area")
 	nlcd_in_area = arcpy.sa.ExtractByMask(nlcd_layer, search_area)
-	thresholded_raster = nlcd_in_area > 24 | nlcd_in_area == 21  # TODO: find a way to make this a parameter - an explicit list of banned values?
+	thresholded_raster = arcpy.sa.Con((nlcd_in_area > 24) | (nlcd_in_area == 21), 1, 0)  # TODO: find a way to make this a parameter - an explicit list of banned values?
 
 	stored_environments = store_environments(('cellSize', 'mask', 'extent', 'snapRaster'))  # cache the env vars so we can reset them at the end of this function
 	arcpy.env.cellSize = nlcd_in_area

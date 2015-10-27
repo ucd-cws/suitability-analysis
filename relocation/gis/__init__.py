@@ -31,7 +31,7 @@ def store_environments(environments_list):
 	"""
 	stored_environments = {}
 	for env in environments_list:
-		stored_environments[env] = arcpy.env.__dict__[env]
+		stored_environments[env] = arcpy.env.__getitem__(env)
 
 	return stored_environments
 
@@ -42,4 +42,4 @@ def reset_environments(stored_environments):
 	:return:
 	"""
 	for env in stored_environments.keys():
-		arcpy.env.__dict__[env] = stored_environments[env]
+		arcpy.env.__setitem__(env, stored_environments[env])

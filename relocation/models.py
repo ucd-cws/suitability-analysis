@@ -123,16 +123,16 @@ class Region(models.Model):
 
 	def __unicode__(self):
 		return unicode(self.name)
-
-
-class SuitabilityAnalysisForm(forms.ModelForm):
-	dem = forms.ChoiceField()
-	slope = forms.ChoiceField()
-	nlcd = forms.ChoiceField()
-	census_places = forms.ChoiceField()
-	protected_areas = forms.ChoiceField()
-	floodplain_areas = forms.ChoiceField()
-	tiger_lines = forms.ChoiceField()
+		
+		
+class RegionForm(forms.ModelForm):
+	dem_name = forms.ChoiceField()
+	slope_name = forms.ChoiceField()
+	nlcd_name = forms.ChoiceField()
+	census_places_name = forms.ChoiceField()
+	protected_areas_name = forms.ChoiceField()
+	floodplain_areas_name = forms.ChoiceField()
+	tiger_lines_name = forms.ChoiceField()
 
 	def __init__(self, *args, **kwargs):
 		super(SuitabilityAnalysisForm, self).__init__(*args, **kwargs)
@@ -144,10 +144,13 @@ class SuitabilityAnalysisForm(forms.ModelForm):
 		self.fields['floodplain_areas'].choices = self.fields['dem'].choices
 		self.fields['tiger_lines'].choices = self.fields['dem'].choices
 
-
-class SuitabilityAnalysisAdmin(admin.ModelAdmin):
-	form = SuitabilityAnalysisForm
-
+	class Meta:
+		model = Region
+		exclude = []
+		
+class RegionAdmin(admin.ModelAdmin):
+	form = RegionForm
+	
 
 class Location(models.Model):
 	name = models.CharField(max_length=255)
@@ -218,8 +221,8 @@ class SuitabilityAnalysis(models.Model):
 
 	def __unicode__(self):
 		return unicode(self.name)
-
-
+	
+	
 class Constraint(InheritanceCastModel):
 	"""
 

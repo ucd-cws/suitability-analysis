@@ -50,7 +50,7 @@ def process_local_slope(dem=None, slope=None, max_slope=30, mask=None, return_ty
 		poly_name = geospatial.generate_gdb_filename("slope_polygon", gdb=workspace)
 		arcpy.CopyFeatures_management(new_name, poly_name)
 
-		return new_name
+		return poly_name
 	elif return_type.lower() == "raster":
 		return raster_name
 	else:
