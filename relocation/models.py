@@ -8,6 +8,7 @@ from django.contrib import admin
 import logging
 import os
 import shutil
+import traceback
 
 # Get an instance of a logger
 processing_log = logging.getLogger("processing_log")
@@ -135,7 +136,7 @@ class RegionForm(forms.ModelForm):
 	tiger_lines_name = forms.ChoiceField()
 
 	def __init__(self, *args, **kwargs):
-		super(SuitabilityAnalysisForm, self).__init__(*args, **kwargs)
+		super(RegionForm, self).__init__(*args, **kwargs)
 		self.fields['dem'].choices = self.instance.get_layer_names()
 		self.fields['slope'].choices = self.fields['dem'].choices
 		self.fields['nlcd'].choices = self.fields['dem'].choices
@@ -209,9 +210,15 @@ class SuitabilityAnalysis(models.Model):
 			if not full_constraint.enabled:
 				continue
 			if not full_constraint.has_run:  # basically, is the constraint ready to merge? We need to preprocess some of them
-				full_constraint.run()  # run constraint
+				try:
+					full_constraint.run()  # run constraint
+				except:
+					processing_log.error("Error running constraint for {0:s}. Processing will proceed to run other constraints and merge completed constraints. To incorporate this constraint, corrections to user paramters or code may be necessary. Python reported the following error: {1:s}".format(full_constraint.name, traceback.format_exc(3)))
 
-			suitable_areas = merge.merge(suitable_areas, full_constraint.polygon_layer, self.workspace, full_constraint.merge_type)
+			try:
+				suitable_areas = merge.merge(suitable_areas, full_constraint.polygon_layer, self.workspace, full_constraint.merge_type)
+			except:
+				processing_log.error("Failed to merge constraint {0:s} with previous constraints! Processing will proceed to run other constraints and merge completed constraints. Python reported the following error: {1:s}".format(full_constraint.name, traceback.format_exc(3)))
 
 		self.result = suitable_areas
 		self.save()
