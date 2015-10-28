@@ -322,7 +322,7 @@ class LandCoverConstraint(Constraint):
 		processing_log.info("Running Land Use Constraint")
 		self.polygon_layer = land_use.land_use(self.suitability_analysis.location.region.nlcd,
 													self.suitability_analysis.location.search_area,
-													self.excluded_types.objects.all(),
+													self.excluded_types.all(),
 													self.suitability_analysis.location.region.tiger_lines,
 													self.suitability_analysis.location.region.census_places,
 													self.suitability_analysis.location.region.crs_string,

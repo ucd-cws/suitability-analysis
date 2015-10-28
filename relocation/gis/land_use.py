@@ -55,7 +55,10 @@ def land_use(nlcd_layer, search_area, excluded_types, tiger_lines, census_places
 	geoprocessing_log.info("Extracting NLCD raster to search area")
 	nlcd_in_area = arcpy.sa.ExtractByMask(nlcd_layer, search_area)
 	avoid_types = [exclude.value for exclude in excluded_types]
-	thresholded_raster = arcpy.sa.Con(nlcd_in_area not in avoid_types, 1, 0)
+
+	thresholded_raster = nlcd_in_area
+	for avoid in avoid_types:  # this is inefficient, but I couldn't get it to work with a "not in" and I need something that works for n number of values
+		thresholded_raster = arcpy.sa.Con(thresholded_raster != avoid, thresholded_raster, 0)
 
 	scratch_raster = generate_gdb_filename("temp_raster", scratch=True)
 	thresholded_raster.save(scratch_raster)  # save it so we can use it for environment variables
