@@ -29,7 +29,7 @@ from relocation.gis import land_use
 from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
 
 MERGE_CHOICES = (("INTERSECT", "INTERSECT"), ("ERASE", "ERASE"))
-LAND_USE_CHOICES = (
+LAND_COVER_CHOICES = (
 	(11, "11 - Open Water"),
 	(12, "12 - Perennial Ice/Snow"),
 	(21, "21 - Developed, Open Space"),
@@ -305,13 +305,18 @@ class ProtectedAreasConstraint(Constraint):
 		self.save()
 
 
-class LandCoverChoices(models.Model):
-	value = models.IntegerField(choices=LAND_USE_CHOICES)
+class LandCoverChoice(models.Model):
+	value = models.IntegerField(choices=LAND_COVER_CHOICES, unique=True)
 
+	def __str__(self):
+		return unicode(self.value)
 
-class LandUseConstraint(Constraint):
+	def __unicode__(self):
+		return unicode(self.value)
+
+class LandCoverConstraint(Constraint):
 	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
-	excluded_types = models.ManyToManyField(LandCoverChoices)
+	excluded_types = models.ManyToManyField(LandCoverChoice)
 
 	def run(self):
 		processing_log.info("Running Land Use Constraint")
