@@ -285,12 +285,12 @@ class UnionConstraint(Constraint):
 
 class LocalSlopeConstraint(Constraint):
 	merge_type = models.CharField(default="INTERSECT", choices=MERGE_CHOICES, max_length=255)  # it comes out with places of acceptable slope
-	max_slope = models.IntegerField(default=30)
+	max_slope = models.IntegerField(default=5)
 
 	def run(self):
 		processing_log.info("Running Local Slope Constraint")
 		self.polygon_layer = slope.process_local_slope(slope=self.suitability_analysis.location.region.slope,
-														max_slope=30,
+														max_slope=self.max_slope,
 														mask=self.suitability_analysis.location.search_area,
 														return_type="polygon", workspace=self.suitability_analysis.workspace)
 

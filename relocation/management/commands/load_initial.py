@@ -70,7 +70,7 @@ def load_initial_data():
 	slope_constraint.name = "TestSlopeConstraint"
 	slope_constraint.description = "test"
 	slope_constraint.suitability_analysis = suitable
-	slope_constraint.max_slope = 25
+	slope_constraint.max_slope = 5
 	slope_constraint.save()
 
 	excluded_types = []
