@@ -8,3 +8,4 @@ locations/*
 geospatial_analysis/*
 __pycache__/*
 *.pyc
+*.pyc

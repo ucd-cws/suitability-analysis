@@ -25,10 +25,11 @@ from relocation.gis import merge
 from relocation.gis import floodplain_areas
 from relocation.gis import census_places
 from relocation.gis import land_use
+from relocation.gis import roads
 
 from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
 
-MERGE_CHOICES = (("INTERSECT", "INTERSECT"), ("ERASE", "ERASE"))
+MERGE_CHOICES = (("INTERSECT", "INTERSECT"), ("ERASE", "ERASE"), ("UNION","UNION"))
 LAND_COVER_CHOICES = (
 	(11, "11 - Open Water"),
 	(12, "12 - Perennial Ice/Snow"),
@@ -225,26 +226,12 @@ class SuitabilityAnalysis(models.Model):
 		self.save()
 
 	def merge(self):
-		suitable_areas = self.location.search_area
-		for constraint in self.constraints.all():
-			full_constraint = constraint.cast()  # get the subobject
-			
-			if not full_constraint.enabled:
-				continue
-			if not full_constraint.has_run:  # basically, is the constraint ready to merge? We need to preprocess some of them
-				try:
-					full_constraint.run()  # run constraint
-				except:
-					processing_log.error("Error running constraint for {0:s}. Processing will proceed to run other constraints and merge completed constraints. To incorporate this constraint, corrections to user paramters or code may be necessary. Python reported the following error: {1:s}".format(full_constraint.name, traceback.format_exc(3)))
-					continue  # don't try to merge if we couldn't create the layer
-
-			try:
-				suitable_areas = merge.merge(suitable_areas, full_constraint.polygon_layer, self.workspace, full_constraint.merge_type)
-			except:
-				processing_log.error("Failed to merge constraint {0:s} with previous constraints! Processing will proceed to run other constraints and merge completed constraints. Python reported the following error: {1:s}".format(full_constraint.name, traceback.format_exc(3)))
+		suitable_areas = merge.merge_constraints(self.location.search_area, self.constraints.all(), self.workspace)
 
 		self.result = suitable_areas
 		self.save()
+
+		return suitable_areas
 
 	def __str__(self):
 		return unicode(self.name)
@@ -272,12 +259,29 @@ class Constraint(InheritanceCastModel):
 		"""
 		self.has_run = False
 		self.run()
-	
+
 	def __str__(self):
 		return unicode(self.name)
 
 	def __unicode__(self):
 		return unicode(self.name)
+
+
+class UnionConstraint(Constraint):
+	"""
+		We may ultimately want to abstract this into a nested constraint generally, but for now, Unioning is one of the only reasons to do this.
+		Provides a constraint grouping that can be unioned before then being intersected or erasing
+	"""
+
+	# merge_type = models.CharField(default="INTERSECT", choices=MERGE_CHOICES, max_length=20)
+	# constraints = Constraints relationship defined by the subobjects as a foreign key
+
+	def run(self):
+		self.polygon_layer = merge.merge_constraints(self.location.search_area, self.constraints.all(), self.workspace)
+
+	class Meta:
+		abstract = True
+
 
 class LocalSlopeConstraint(Constraint):
 	merge_type = models.CharField(default="INTERSECT", choices=MERGE_CHOICES, max_length=255)  # it comes out with places of acceptable slope
@@ -313,6 +317,7 @@ class LandCoverChoice(models.Model):
 
 	def __unicode__(self):
 		return unicode(self.value)
+
 
 class LandCoverConstraint(Constraint):
 	merge_type = models.CharField(default="ERASE", choices=MERGE_CHOICES, max_length=255)
@@ -352,3 +357,21 @@ class CensusPlacesConstraint(Constraint):
 
 		self.has_run = True
 		self.save()
+
+
+class RoadClassDistanceConstraintManager(UnionConstraint):
+	"""
+		Manages merging of the subconstraints, but then acts as a normal constraint
+	"""
+	merge_type = models.CharField(default="INTERSECT", choices=MERGE_CHOICES, max_length=255)  # ultimately intersected after the merging
+
+
+class RoadClassDistanceConstraint(Constraint):
+	merge_type = models.CharField(default="UNION", choices=MERGE_CHOICES, max_length=255)
+	constraint_manager = models.ForeignKey(RoadClassDistanceConstraintManager, related_name="constraints")
+
+	max_distance = models.IntegerField(default=1000)
+	where_clause = models.TextField(default="")
+
+	def run(self):
+		roads.road_distance(self.constraint_manager.suitability_analysis.location.region.tiger_lines, self.max_distance, self.where_clause, self.constraint_manager.suitability_analysis.workspace)
