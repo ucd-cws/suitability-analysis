@@ -29,7 +29,7 @@ from relocation.gis import roads
 
 from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
 
-MERGE_CHOICES = (("INTERSECT", "INTERSECT"), ("ERASE", "ERASE"), ("UNION","UNION"))
+MERGE_CHOICES = (("INTERSECT", "INTERSECT"), ("ERASE", "ERASE"), ("UNION", "UNION"), ("RASTER_ADD", "RASTER_ADD"))
 LAND_COVER_CHOICES = (
 	(11, "11 - Open Water"),
 	(12, "12 - Perennial Ice/Snow"),
@@ -375,3 +375,20 @@ class RoadClassDistanceConstraint(Constraint):
 
 	def run(self):
 		roads.road_distance(self.constraint_manager.suitability_analysis.location.region.tiger_lines, self.max_distance, self.where_clause, self.constraint_manager.suitability_analysis.workspace)
+
+
+class ScoredConstraint(Constraint):
+	merge_type = models.CharField(default="RASTER_ADD", choices=MERGE_CHOICES, max_length=255)
+	scaling_factor = models.FloatField(default=1.0)
+
+	raster_layer = models.FilePathField(null=True, blank=True)
+
+	def rescale(self):
+		"""
+			After the raster is run, this function is responsible for rescaling it so that it is between 0 and scaling factor in terms of importance
+		:return:
+		"""
+
+		# See http://gis.stackexchange.com/questions/50169/how-to-standardize-raster-output-from-0-to-100-using-raster-algebra
+
+		pass
