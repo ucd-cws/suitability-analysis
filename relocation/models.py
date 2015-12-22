@@ -221,6 +221,7 @@ class SuitabilityAnalysis(models.Model):
 	location = models.OneToOneField(Location, related_name="suitability_analysis")
 	result = models.FilePathField(null=True, blank=True)
 	potential_suitable_areas = models.FilePathField(null=True, blank=True)
+	split_potential_areas = models.FilePathField(null=True, blank=True)
 
 	working_directory = models.FilePathField(path=GEOSPATIAL_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
@@ -231,7 +232,7 @@ class SuitabilityAnalysis(models.Model):
 
 	def merge(self):
 		self.potential_suitable_areas = merge.merge_constraints(self.location.search_area, self.constraints.all(), self.workspace)
-
+		self.split_potential_areas = self.split()
 
 		self.result = self.potential_suitable_areas
 		self.save()
@@ -258,11 +259,20 @@ class SuitabilityAnalysis(models.Model):
 		:return:
 		"""
 
+		if not self.potential_suitable_areas:
+			processing_log.error("potential_suitable_areas is not defined - the split method can only be called after a merge has initiated, generated, and saved the potential suitable areas")
+			raise ValueError("potential_suitable_areas is not defined - the split method can only be called after a merge has initiated, generated, and saved the potential suitable areas")
+
 		if self.location.region.parcels:
 			mesh = self.location.region.parcels
 		else:
 			mesh = self.generate_mesh()
 
+		split_areas = generate_gdb_filename(gdb=self.workspace)
+		geoprocessing_log.info("Intersecting potential areas with parcels")
+		arcpy.Intersect_analysis(in_features=[self.potential_suitable_areas, self.mesh], out_feature_class=split_areas)
+
+		return split_areas
 
 	
 class Constraint(InheritanceCastModel):
