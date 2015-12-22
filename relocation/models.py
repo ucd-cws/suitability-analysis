@@ -107,6 +107,8 @@ class Region(models.Model):
 	floodplain_areas = models.FilePathField(null=True, blank=True, editable=False)
 	tiger_lines_name = models.CharField(max_length=255, )
 	tiger_lines = models.FilePathField(null=True, blank=True, editable=False)
+	parcels_name = models.CharField(max_length=255, null=True, blank=True)
+	parcels = models.FilePathField(null=True, blank=True, editable=False)
 
 	def setup(self):
 		#if not (self.base_directory and self.layers):
@@ -119,6 +121,7 @@ class Region(models.Model):
 		self.protected_areas = os.path.join(str(self.layers), self.protected_areas_name)
 		self.floodplain_areas = os.path.join(str(self.layers), self.floodplain_areas_name)
 		self.tiger_lines = os.path.join(str(self.layers), self.tiger_lines_name)
+		self.parcels = os.path.join(str(self.layers), self.parcels_name)
 		self.save()
 
 	def clean_working(self):
@@ -217,6 +220,7 @@ class SuitabilityAnalysis(models.Model):
 
 	location = models.OneToOneField(Location, related_name="suitability_analysis")
 	result = models.FilePathField(null=True, blank=True)
+	potential_suitable_areas = models.FilePathField(null=True, blank=True)
 
 	working_directory = models.FilePathField(path=GEOSPATIAL_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
@@ -226,19 +230,40 @@ class SuitabilityAnalysis(models.Model):
 		self.save()
 
 	def merge(self):
-		suitable_areas = merge.merge_constraints(self.location.search_area, self.constraints.all(), self.workspace)
+		self.potential_suitable_areas = merge.merge_constraints(self.location.search_area, self.constraints.all(), self.workspace)
 
-		self.result = suitable_areas
+
+		self.result = self.potential_suitable_areas
 		self.save()
 
-		return suitable_areas
+		return self.result
 
 	def __str__(self):
 		return unicode(self.name)
 
 	def __unicode__(self):
 		return unicode(self.name)
-	
+
+	def generate_mesh(self):
+		"""
+			TODO: Placeholder function - implement the hexagonal mesh. Need to move on and use the parcels for now)
+		:return: path to feature class of the new mesh, in the location gdb
+		"""
+
+		return self.location.region.parcels
+
+	def split(self):
+		"""
+			After the initial merge is done, this method splits up the potential areas based on the parcels (or hexagonal data)
+		:return:
+		"""
+
+		if self.location.region.parcels:
+			mesh = self.location.region.parcels
+		else:
+			mesh = self.generate_mesh()
+
+
 	
 class Constraint(InheritanceCastModel):
 	"""
@@ -378,6 +403,10 @@ class RoadClassDistanceConstraint(Constraint):
 
 
 class ScoredConstraint(Constraint):
+	"""
+		This constraint was originally meant to set manual weights, but it's on hold as of Dec 2015 since we're focusing
+		on making the logistic regression model.
+	"""
 	merge_type = models.CharField(default="RASTER_ADD", choices=MERGE_CHOICES, max_length=255)
 	scaling_factor = models.FloatField(default=1.0)
 

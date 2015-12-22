@@ -33,6 +33,7 @@ def load_initial_data():
 	region.protected_areas_name = "protected_areas_2015"
 	region.floodplain_areas_name = "IL_unprotected_floodplain_2012"
 	region.tiger_lines_name = "tiger_roads_2011_albers"
+	region.parcels = "monroe_parcels"
 	region.save()
 	region.setup()
 	region.save()
@@ -44,7 +45,7 @@ def load_initial_data():
 	location.working_directory = r"C:\Users\dsx.AD3\Code\FloodMitigation\locations\Valmeyer_Full"
 	location.layers = r"C:\Users\dsx.AD3\Code\FloodMitigation\locations\Valmeyer_Full\Valmeyer_Full.gdb"
 	location.boundary_polygon_name = "valmeyer_full"
-	location.search_distance = 15000
+	location.search_distance = 12000
 	location.save()
 
 	suitable = SuitabilityAnalysis()
