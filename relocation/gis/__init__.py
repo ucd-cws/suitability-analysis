@@ -52,18 +52,19 @@ def reset_environments(stored_environments):
 		arcpy.env.__setitem__(env, stored_environments[env])
 
 
-def centroid_near_distance(feature_class, near_feature):
-	'''
-		Adaptation of centroid distance code from code library to do a more basic operation by simply getting the centroid of each polygon, and then doing the same for the near features
-	'''
+def centroid_near_distance(feature_class, near_feature, id_field, search_radius=1000):
+	"""
+		Adaptation of centroid distance code from code library to do a more basic operation by simply getting the centroid of each polygon,
+		and then doing the same for the near features
+	"""
 
-	centroids = geometry.get_centroids(feature_class, dissolve=False)  # merge, don't append
+	centroids = geometry.get_centroids(feature_class, dissolve=False, id_field=id_field)  # merge, don't append
 
 	if len(centroids) == 0:
 		processing_log.warning("No centroids generated - something probably went wrong")
 		return False
 
-	point_file = geometry.write_features_from_list(centroids, "POINT", spatial_reference=feature_class)
+	point_file = geometry.write_features_from_list(centroids, "POINT", spatial_reference=feature_class, write_ids=True)
 
 	near_centroid = geometry.get_centroids(near_feature, dissolve=False)  # merge, don't append
 
@@ -78,9 +79,80 @@ def centroid_near_distance(feature_class, near_feature):
 	processing_log.info("Output Table will be located at %s" % out_table)
 
 	try:
-		arcpy.PointDistance_analysis(in_features=point_file, near_features=near_point_file, out_table=out_table)
+		arcpy.PointDistance_analysis(in_features=point_file, near_features=near_point_file, out_table=out_table, search_radius=search_radius)
 	except:
 		processing_log.error("Couldn't run PointDistance - %s" % traceback.format_exc())
 		return False
 
 	return {"out_table": out_table, "point_file": point_file, }  # start just returning a dictionary instead of positional values
+
+
+def permanent_join(target_table, target_attribute, source_table, source_attribute, attribute_to_attach, rename_attribute=None):
+	"""
+	Provides a way to permanently attach a field to another table, as in a one to one join, but without performing a
+	join then exporting a new dataset. Operates in place by creating a new field on the existing dataset.
+
+	Or, in other words, Attaches a field to a dataset in place in ArcGIS - instead of the alternative of doing an
+	actual join and then saving out a new dataset. Only works as a one to one join.
+
+	:param target_table: the table to attach the joined attribute to
+	:param target_attribute: the attribute in the table to base the join on
+	:param source_table: the table containing the attribute to join
+	:param source_attribute: the attribute in table2 to base the join on
+	:param attribute_to_attach: the attribute to attach to table 1
+	:param rename_attribute: string to indicate what to rename the field as when it's joined.
+	:return: None
+	"""
+
+	# first, we need to find the information about the field that we're attaching
+	join_table_fields = arcpy.ListFields(source_table)
+	for field in join_table_fields:
+		if field.name == attribute_to_attach:  # we found our attribute
+			base_field = field
+			break
+	else:
+		raise ValueError("Couldn't find field to base join on in source table")
+
+	type_mapping = {"Integer": "LONG", "OID": "LONG", "SmallInteger": "SHORT", "String": "TEXT"}  # ArcGIS annoyingly doesn't report out the same data types as you need to provide, so this allows us to map one to the other
+	if base_field.type in type_mapping.keys():  # if it's a type that needs conversion
+		new_type = type_mapping[base_field.type]  # look it up and save it
+	else:
+		new_type = base_field.type.upper()  # otherwise, just grab the exact type as specified
+
+	if rename_attribute:
+		new_name = rename_attribute
+	else:
+		new_name = base_field.name
+
+	# copy the field over other than those first two attributes
+	arcpy.AddField_management(target_table, new_name, new_type, field.precision, field.scale, field.length, field_alias=None, field_is_nullable=field.isNullable, field_is_required=field.required, field_domain=field.domain)
+
+	join_data = read_field_to_dict(source_table, attribute_to_attach, source_attribute)  # look up these values so we can easily just use one cursor at a time - first use the search cursor, then the update cursor on the new table
+
+	updater = arcpy.UpdateCursor(target_table)
+	for row in updater:
+		if row.getValue(target_attribute) in join_data.keys():  # since we might not always have a match, we need to check, this should speed things up too
+			row.setValue(new_name, join_data[row.getValue(target_attribute)])  # set the value for the new field to the other table's value for that same field, indexed by key
+			updater.updateRow(row)
+
+	del updater
+
+
+def read_field_to_dict(input_table, data_field, key_field):
+	"""
+		Given an arcgis table and a field containing keys and values, reads that field into a dict based on the key field
+	:param table: an ArcGIS table (or feature class, etc)
+	:param data_field: the field that contains the data of interest - these values will be the dictionary values
+	:param key_field: the field that contains the keys/pkey values - these values will be the keys in the dictionary
+	:return: dict of the data loaded from the table
+	"""
+
+	data_dict = {}
+
+	rows = arcpy.SearchCursor(input_table)
+	for row in rows:
+		data_dict[row.getValue(key_field)] = row.getValue(data_field)
+
+	del rows
+
+	return data_dict
