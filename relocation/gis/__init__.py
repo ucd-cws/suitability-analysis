@@ -84,7 +84,7 @@ def centroid_near_distance(feature_class, near_feature, id_field, search_radius=
 		processing_log.error("Couldn't run PointDistance - %s" % traceback.format_exc())
 		return False
 
-	return {"out_table": out_table, "point_file": point_file, }  # start just returning a dictionary instead of positional values
+	return {"table": out_table, "point_file": point_file, }  # start just returning a dictionary instead of positional values
 
 
 def permanent_join(target_table, target_attribute, source_table, source_attribute, attribute_to_attach, rename_attribute=None):

@@ -26,6 +26,7 @@ from relocation.gis import floodplain_areas
 from relocation.gis import census_places
 from relocation.gis import land_use
 from relocation.gis import roads
+from relocation.gis import parcels
 
 from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
 
@@ -179,6 +180,27 @@ class RegionAdmin(admin.ModelAdmin):
 	form = RegionForm
 	
 
+class Parcels(models.Model):
+	"""
+		A place to aggregate functions that operate on parcels
+	"""
+
+	layer = models.FilePathField(null=False, blank=False, editable=True)
+	id_field = models.CharField(max_length=255, default="OBJECTID", null=False, blank=False)
+
+	def setup(self):
+		self.compute_distances()
+		self.save()
+
+	def compute_distances(self):
+		new_field_name = "centroid_distance_to_original_boundary"
+		distance_information = gis.centroid_near_distance(self.layer, self.location.boundary_polygon, self.id_field, self.location.search_distance)
+		try:
+			gis.permanent_join(self.layer, self.id_field, distance_information["table"], "INPUT_FID", "DISTANCE", new_field_name)  # INPUT_FID and DISTANCE are results of ArcGIS, so it's safe *enough* to hard-code them.
+		except:  # just trying to keep the whole program coming down if an exception is raised during processing
+			processing_log.error("Error attaching centroid distance information - this information is currently missing from the parcels - correct your inputs or the code and reprocess the centroid distnances, or this metric will be unavailable")
+
+
 class Location(models.Model):
 	name = models.CharField(max_length=255)
 	short_name = models.SlugField(blank=False, null=False)
@@ -193,6 +215,9 @@ class Location(models.Model):
 	search_distance = models.IntegerField(default=25000)  # meters
 	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
 
+	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
+	parcels = models.ForeignKey(Parcels, related_name="location")
+
 	def setup(self):
 		"""
 			setup must be run first on Suitability Analysis object!
@@ -204,6 +229,13 @@ class Location(models.Model):
 			self.search_area = generate_gdb_filename("search_area", gdb=self.suitability_analysis.workspace)
 			geoprocessing_log.info("Running buffer or area boundary to find search area")
 			arcpy.Buffer_analysis(self.boundary_polygon, self.search_area, self.search_distance)
+
+		if self.parcels is None or self.parcels == "":
+			self.parcels = Parcels()
+			self.parcels.layer = generate_gdb_filename(self.region.parcels_name, gdb=self.layers)
+			geoprocessing_log.info("Copying parcels layer to location geodatabase")
+			arcpy.CopyFeatures_management(self.region.parcels, self.parcels)
+			self.parcels.save()
 
 		self.save()
 
@@ -274,7 +306,7 @@ class SuitabilityAnalysis(models.Model):
 
 		return split_areas
 
-	
+
 class Constraint(InheritanceCastModel):
 	"""
 
