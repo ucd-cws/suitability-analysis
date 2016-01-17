@@ -216,7 +216,7 @@ class Location(models.Model):
 	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
 
 	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
-	parcels = models.ForeignKey(Parcels, related_name="location")
+	parcels = models.ForeignKey(Parcels, related_name="location", null=True, blank=True)
 
 	def setup(self):
 		"""
