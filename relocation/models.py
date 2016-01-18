@@ -185,8 +185,8 @@ class Parcels(models.Model):
 		A place to aggregate functions that operate on parcels
 	"""
 
-	layer = models.FilePathField(null=False, blank=False, editable=True)
-	id_field = models.CharField(max_length=255, default="OBJECTID", null=False, blank=False)
+	layer = models.FilePathField(null=True, blank=True, editable=True)
+	id_field = models.CharField(max_length=255, default="OBJECTID", null=True, blank=True)
 
 	def setup(self):
 		self.compute_distances()
@@ -216,7 +216,18 @@ class Location(models.Model):
 	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
 
 	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
-	parcels = models.ForeignKey(Parcels, related_name="location", null=True, blank=True)
+	parcels = models.OneToOneField(Parcels, related_name="location")
+
+	def immediate_setup(self):
+		"""
+			Run before everything else is ready, but make sure integrity is intact
+		:return:
+		"""
+
+		parcels = Parcels()
+		parcels.save()
+		self.parcels = parcels  # trying a backward hack around a problem
+		self.save()
 
 	def setup(self):
 		"""
@@ -231,7 +242,6 @@ class Location(models.Model):
 			arcpy.Buffer_analysis(self.boundary_polygon, self.search_area, self.search_distance)
 
 		if self.parcels is None or self.parcels == "":
-			self.parcels = Parcels()
 			self.parcels.layer = generate_gdb_filename(self.region.parcels_name, gdb=self.layers)
 			geoprocessing_log.info("Copying parcels layer to location geodatabase")
 			arcpy.CopyFeatures_management(self.region.parcels, self.parcels)

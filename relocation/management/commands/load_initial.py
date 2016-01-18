@@ -46,6 +46,7 @@ def load_initial_data():
 	location.layers = r"C:\Users\dsx.AD3\Code\FloodMitigation\locations\Valmeyer_Full\Valmeyer_Full.gdb"
 	location.boundary_polygon_name = "valmeyer_full"
 	location.search_distance = 12000
+	location.immediate_setup()  # set up related objects NOW
 	location.save()  # location setup occurs after suitability analysis is created
 
 	suitable = SuitabilityAnalysis()
