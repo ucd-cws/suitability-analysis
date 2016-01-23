@@ -18,7 +18,7 @@ def merge(existing_areas, change_areas, workspace, method="ERASE"):
 	:return:
 	"""
 
-	if method != "ERASE" and method != "INTERSECT":
+	if method not in ("ERASE", "INTERSECT"):
 		raise ValueError("argument 'method' to merge function is invalid. Must be either 'ERASE' or 'INTERSECT'")
 
 	new_features = generate_gdb_filename("suitable_areas", return_full=True, gdb=workspace)
