@@ -13,11 +13,11 @@ class Command(BaseCommand):
 	"""
 
 	def add_arguments(self, parser):
-		parser.add_argument('suitability_analysis', nargs='+', tpye=str)
+		parser.add_argument('suitability_analysis', nargs='+', type=str)
 
 	def handle(self, *args, **options):
-		suitability_analysis = models.SuitabilityAnalysis.objects.get(name=options["suitability_analysis"])
-		suitability_analysis.location.parcels.process_parcels()
+		suitability_analysis = models.SuitabilityAnalysis.objects.get(pk=2)
+		suitability_analysis.location.parcels.setup()
 
 		self.stdout.write('Parcels processed')
 

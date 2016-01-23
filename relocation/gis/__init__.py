@@ -60,7 +60,7 @@ def centroid_near_distance(feature_class, near_feature, id_field, search_radius=
 
 	centroids = geometry.get_centroids(feature_class, dissolve=False, id_field=id_field)  # merge, don't append
 
-	if len(centroids) == 0:
+	if not centroids:
 		processing_log.warning("No centroids generated - something probably went wrong")
 		return False
 
@@ -68,7 +68,7 @@ def centroid_near_distance(feature_class, near_feature, id_field, search_radius=
 
 	near_centroid = geometry.get_centroids(near_feature, dissolve=False)  # merge, don't append
 
-	if len(near_centroid) == 0:
+	if not near_centroid:
 		processing_log.warning("No centroids generated for near feature- something probably went wrong")
 		return False
 
