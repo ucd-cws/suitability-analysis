@@ -74,14 +74,14 @@ def centroid_near_distance(feature_class, near_feature, id_field, search_radius=
 
 	near_point_file = geometry.write_features_from_list(near_centroid, "POINT", spatial_reference=near_feature)
 
-	processing_log.info("Point File located at %s" % point_file)
+	processing_log.info("Point File located at {0!s}".format(point_file))
 	out_table = geospatial.generate_gdb_filename("out_table", return_full=True)
-	processing_log.info("Output Table will be located at %s" % out_table)
+	processing_log.info("Output Table will be located at {0!s}".format(out_table))
 
 	try:
 		arcpy.PointDistance_analysis(in_features=point_file, near_features=near_point_file, out_table=out_table, search_radius=search_radius)
 	except:
-		processing_log.error("Couldn't run PointDistance - %s" % traceback.format_exc())
+		processing_log.error("Couldn't run PointDistance - {0!s}".format(traceback.format_exc()))
 		return False
 
 	return {"table": out_table, "point_file": point_file, }  # start just returning a dictionary instead of positional values
