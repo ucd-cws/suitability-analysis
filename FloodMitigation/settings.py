@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 
+from secrets import SECRET_KEY
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 GEOSPATIAL_DIRECTORY = os.path.join(BASE_DIR, "geospatial_analysis")
@@ -21,9 +23,6 @@ LOCATIONS_DIRECTORY = os.path.join(BASE_DIR, "locations")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = ')!%m(3+xt(v_t-f@qr7%(9xn00ntc#m851wqe4qr0#6zk@m3b('
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

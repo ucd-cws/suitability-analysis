@@ -9,3 +9,4 @@ geospatial_analysis/*
 __pycache__/*
 *.pyc
 *.pyc
+FloodMitigation/secrets.py
