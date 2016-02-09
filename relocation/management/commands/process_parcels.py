@@ -4,6 +4,14 @@ from django.core.management.base import BaseCommand, CommandError
 
 from relocation import models
 
+from code_library.common.geospatial import generate_gdb_filename
+import arcpy
+
+import logging
+
+processing_log = logging.getLogger("processing_log")
+geoprocessing_log = logging.getLogger("geoprocessing")
+
 
 class Command(BaseCommand):
 	"""
@@ -17,8 +25,26 @@ class Command(BaseCommand):
 
 	def handle(self, *args, **options):
 		suitability_analysis = models.SuitabilityAnalysis.objects.get(pk=2)
+		temp_correction(suitability_analysis.location)
+		processing_log.warning("Running setup")
+
 		suitability_analysis.location.parcels.setup()
+		processing_log.warning("Done setting up")
 
 		self.stdout.write('Parcels processed')
 
+
+def temp_correction(correction):
+	"""
+		A one time function to correct an object - can be deleted
+	:return:
+	"""
+	processing_log.warning("{0:s}".format(correction.parcels.layer))
+	if correction.parcels.layer is None or correction.parcels.layer == "":
+		correction.parcels.layer = generate_gdb_filename(correction.region.parcels_name, gdb=correction.layers)
+		processing_log.warning("{0:s}".format(correction.parcels.layer))
+		arcpy.CopyFeatures_management(correction.region.parcels, correction.parcels.layer)
+		correction.parcels.save()
+
+	processing_log.warning("Done setting up")
 

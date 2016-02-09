@@ -1,0 +1,4 @@
+This file lists external dependencies of this project that need to be installed on
+the server running this system:
+
+ogr2ogr along with python extensionAas

@@ -58,25 +58,35 @@ def centroid_near_distance(feature_class, near_feature, id_field, search_radius=
 		and then doing the same for the near features
 	"""
 
+	if not feature_class or not near_feature:
+		raise ValueError("missing the feature class or the near feature - both arguments must be defined!")
+
 	centroids = geometry.get_centroids(feature_class, dissolve=False, id_field=id_field)  # merge, don't append
 
 	if not centroids:
-		processing_log.warning("No centroids generated - something probably went wrong")
+		processing_log.info("No centroids generated - something probably went wrong")
 		return False
 
-	point_file = geometry.write_features_from_list(centroids, "POINT", spatial_reference=feature_class, write_ids=True)
+	processing_log.info("first centroids retrieved")
+
+	temp_filename = arcpy.CreateScratchName("temp", workspace=r"C:\Users\dsx.AD3\Documents\ArcGIS\scratch.gdb")
+	processing_log.info("{0:s}".format(temp_filename))
+	point_file = geometry.write_features_from_list(centroids, "POINT", filename=geospatial.generate_gdb_filename(), spatial_reference=feature_class, write_ids=True)
+	processing_log.info("first centroids written")
 
 	near_centroid = geometry.get_centroids(near_feature, dissolve=False)  # merge, don't append
 
+	processing_log.info("second centroids retrieved")
 	if not near_centroid:
-		processing_log.warning("No centroids generated for near feature- something probably went wrong")
+		processing_log.info("No centroids generated for near feature- something probably went wrong")
 		return False
 
 	near_point_file = geometry.write_features_from_list(near_centroid, "POINT", spatial_reference=near_feature)
+	processing_log.info("second centroids written")
 
-	processing_log.info("Point File located at {0!s}".format(point_file))
+	processing_log.info("Point File located at {0!s}".format(point_file))  # change back to info
 	out_table = geospatial.generate_gdb_filename("out_table", return_full=True)
-	processing_log.info("Output Table will be located at {0!s}".format(out_table))
+	processing_log.info("Output Table will be located at {0!s}".format(out_table))  # change back to info
 
 	try:
 		arcpy.PointDistance_analysis(in_features=point_file, near_features=near_point_file, out_table=out_table, search_radius=search_radius)

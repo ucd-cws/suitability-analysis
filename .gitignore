@@ -10,3 +10,8 @@ __pycache__/*
 *.pyc
 *.pyc
 FloodMitigation/secrets.py
+activate.bat
+relocation/migrations/*
+FloodMitigation/local_settings.py
+scratch/scratch.gdb/*
+log_db.sqlite3

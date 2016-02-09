@@ -60,7 +60,7 @@ class InheritanceCastModel(models.Model):
 	
 	Model from http://stackoverflow.com/a/929982/587938 - used to obtain subclass object using parent class/relationship
 	
-	An abstract base class that provides a ``real_type`` FK to ContentType.
+	An abstract base class that provides a ``real_type`` ForeignKey to ContentType.
 
 	For use in trees of inherited models, to be able to downcast
 	parent instances to their child types.
@@ -186,16 +186,40 @@ class Parcels(models.Model):
 	"""
 
 	layer = models.FilePathField(null=True, blank=True, editable=True)
+	original_layer = models.FilePathField(null=True, blank=True, editable=True)
 	id_field = models.CharField(max_length=255, default="OBJECTID", null=True, blank=True)
 
 	def setup(self):
+		self.duplicate_layer()  # copy the parcels out so that we can keep a fresh copy for reprocessing still
 		self.compute_distances()
 		self.save()
 
+	def duplicate_layer(self):
+		"""
+			Duplicates the parcels layer into the suitability analysis so we always have the original copy
+		:return:
+		"""
+
+		new_name = arcpy.CreateUniqueName(os.path.split(self.original_layer)[1], self.location.suitability_analysis.workspace)  # get me a new name in the same geodatabase
+		new_path = os.path.join(self.location.suitability_analysis.workspace, new_name)
+		arcpy.CopyFeatures_management(self.original_layer, new_path)
+		self.layer = new_path
+		self.save()
+
+
 	def compute_distances(self):
 		new_field_name = "centroid_distance_to_original_boundary"
+
+		if not self.layer:
+			raise ValueError("Parcel layer (attribute: layer) is not defined - can't proceed with computations!")
+
+		if not self.id_field:
+			raise ValueError("Parcel ID/ObjectID field (attribute: id_field) is not defined - can't proceed with computations!")
+
+		processing_log.info("Centroid Near Distance")
 		distance_information = gis.centroid_near_distance(self.layer, self.location.boundary_polygon, self.id_field, self.location.search_distance)
 		try:
+			processing_log.info("Permanent Join")
 			gis.permanent_join(self.layer, self.id_field, distance_information["table"], "INPUT_FID", "DISTANCE", new_field_name)  # INPUT_FID and DISTANCE are results of ArcGIS, so it's safe *enough* to hard-code them.
 		except:  # just trying to keep the whole program coming down if an exception is raised during processing
 			processing_log.error("Error attaching centroid distance information - this information is currently missing from the parcels - correct your inputs or the code and reprocess the centroid distnances, or this metric will be unavailable")
@@ -224,9 +248,8 @@ class Location(models.Model):
 		:return:
 		"""
 
-		parcels = Parcels()
-		parcels.save()
-		self.parcels = parcels  # trying a backward hack around a problem
+		self.parcels = Parcels()  # trying a backward hack around a problem
+		self.parcels.save()
 		self.save()
 
 	def setup(self):
@@ -241,10 +264,11 @@ class Location(models.Model):
 			geoprocessing_log.info("Running buffer or area boundary to find search area")
 			arcpy.Buffer_analysis(self.boundary_polygon, self.search_area, self.search_distance)
 
-		if self.parcels is None or self.parcels == "":
+		if self.parcels.layer is None or self.parcels.layer == "":
 			self.parcels.layer = generate_gdb_filename(self.region.parcels_name, gdb=self.layers)
 			geoprocessing_log.info("Copying parcels layer to location geodatabase")
-			arcpy.CopyFeatures_management(self.region.parcels, self.parcels)
+			print self.parcels.layer
+			arcpy.CopyFeatures_management(self.region.parcels, self.parcels.layer)
 			self.parcels.save()
 
 		self.save()
@@ -269,7 +293,8 @@ class SuitabilityAnalysis(models.Model):
 	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 
 	def setup(self):
-		self.working_directory, self.workspace = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
+		self.working_directory = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
+		self.workspace = arcpy.CreateFileGDB_management(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
 		self.save()
 
 	def merge(self):

@@ -15,6 +15,10 @@ import os
 
 from secrets import SECRET_KEY
 
+import local_settings
+import gis
+
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 GEOSPATIAL_DIRECTORY = os.path.join(BASE_DIR, "geospatial_analysis")
@@ -40,7 +44,6 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'relocation',
-    'debug_toolbar',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -120,3 +123,28 @@ TEMPLATES = [
         },
     },
 ]
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'handlers': {
+        'log_to_stdout': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            },
+        },
+    'loggers': {
+        'main': {
+            'handlers': ['log_to_stdout'],
+            'level': 'DEBUG',
+            'propagate': True,
+        }
+    }
+}
