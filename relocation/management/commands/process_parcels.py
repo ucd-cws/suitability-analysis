@@ -25,11 +25,11 @@ class Command(BaseCommand):
 
 	def handle(self, *args, **options):
 		suitability_analysis = models.SuitabilityAnalysis.objects.get(pk=2)
-		temp_correction(suitability_analysis.location)
-		processing_log.warning("Running setup")
+		#temp_correction(suitability_analysis.location)
+		processing_log.info("Running setup")
 
-		suitability_analysis.location.parcels.setup()
-		processing_log.warning("Done setting up")
+		suitability_analysis.parcels.setup()
+		processing_log.info("Done setting up")
 
 		self.stdout.write('Parcels processed')
 

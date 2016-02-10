@@ -12,6 +12,9 @@ from code_library.common.geospatial import geometry
 
 processing_log = logging.getLogger("processing_log")
 
+import temp
+from FloodMitigation import local_settings
+temp.temp_gdb = local_settings.SCRATCH_GDB
 
 def create_working_directories(base_folder, folder_name):
 

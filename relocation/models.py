@@ -16,7 +16,7 @@ geoprocessing_log = logging.getLogger("geoprocessing")
 
 import arcpy
 
-from code_library.common.geospatial import generate_gdb_filename
+from relocation.gis.temp import generate_gdb_filename
 
 from relocation import gis
 from relocation.gis import slope
@@ -180,6 +180,47 @@ class RegionAdmin(admin.ModelAdmin):
 	form = RegionForm
 	
 
+class Location(models.Model):
+	name = models.CharField(max_length=255)
+	short_name = models.SlugField(blank=False, null=False)
+	region = models.ForeignKey(Region, null=False)
+
+	working_directory = models.FilePathField(path=LOCATIONS_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
+	layers = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
+
+	boundary_polygon_name = models.CharField(max_length=255)
+	boundary_polygon = models.FilePathField(null=True, blank=True, recursive=True, max_length=255, allow_folders=True, allow_files=False, editable=False)
+
+	search_distance = models.IntegerField(default=25000)  # meters
+	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
+
+	def setup(self):
+		"""
+			setup must be run first on Suitability Analysis object!
+		"""
+
+		self.boundary_polygon = os.path.join(str(self.layers), self.boundary_polygon_name)
+
+		if self.search_area is None or self.search_area == "":
+			self.search_area = generate_gdb_filename("search_area", gdb=self.suitability_analysis.workspace)
+			geoprocessing_log.info("Running buffer or area boundary to find search area")
+			arcpy.Buffer_analysis(self.boundary_polygon, self.search_area, self.search_distance)
+
+		if self.parcels.layer is None or self.parcels.layer == "":
+			self.parcels.layer = generate_gdb_filename(self.region.parcels_name, gdb=self.layers)
+			geoprocessing_log.info("Copying parcels layer to location geodatabase")
+			arcpy.CopyFeatures_management(self.region.parcels, self.parcels.layer)
+			self.parcels.save()
+
+		self.save()
+
+	def __str__(self):
+		return unicode(self.name)
+
+	def __unicode__(self):
+		return unicode(self.name)
+
+
 class Parcels(models.Model):
 	"""
 		A place to aggregate functions that operate on parcels
@@ -200,12 +241,11 @@ class Parcels(models.Model):
 		:return:
 		"""
 
-		new_name = arcpy.CreateUniqueName(os.path.split(self.original_layer)[1], self.location.suitability_analysis.workspace)  # get me a new name in the same geodatabase
-		new_path = os.path.join(self.location.suitability_analysis.workspace, new_name)
+		new_name = arcpy.CreateUniqueName(os.path.split(self.original_layer)[1], self.suitability_analysis.workspace)  # get me a new name in the same geodatabase
+		new_path = os.path.join(self.suitability_analysis.workspace, new_name)
 		arcpy.CopyFeatures_management(self.original_layer, new_path)
 		self.layer = new_path
 		self.save()
-
 
 	def compute_distances(self):
 		new_field_name = "centroid_distance_to_original_boundary"
@@ -217,67 +257,12 @@ class Parcels(models.Model):
 			raise ValueError("Parcel ID/ObjectID field (attribute: id_field) is not defined - can't proceed with computations!")
 
 		processing_log.info("Centroid Near Distance")
-		distance_information = gis.centroid_near_distance(self.layer, self.location.boundary_polygon, self.id_field, self.location.search_distance)
+		distance_information = gis.centroid_near_distance(self.layer, self.suitability_analysis.location.boundary_polygon, self.id_field, self.suitability_analysis.location.search_distance)
 		try:
 			processing_log.info("Permanent Join")
 			gis.permanent_join(self.layer, self.id_field, distance_information["table"], "INPUT_FID", "DISTANCE", new_field_name)  # INPUT_FID and DISTANCE are results of ArcGIS, so it's safe *enough* to hard-code them.
 		except:  # just trying to keep the whole program coming down if an exception is raised during processing
 			processing_log.error("Error attaching centroid distance information - this information is currently missing from the parcels - correct your inputs or the code and reprocess the centroid distnances, or this metric will be unavailable")
-
-
-class Location(models.Model):
-	name = models.CharField(max_length=255)
-	short_name = models.SlugField(blank=False, null=False)
-	region = models.ForeignKey(Region, null=False)
-
-	working_directory = models.FilePathField(path=LOCATIONS_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
-	layers = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
-
-	boundary_polygon_name = models.CharField(max_length=255)
-	boundary_polygon = models.FilePathField(null=True, blank=True, recursive=True, max_length=255, allow_folders=True, allow_files=False, editable=False)
-
-	search_distance = models.IntegerField(default=25000)  # meters
-	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
-
-	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
-	parcels = models.OneToOneField(Parcels, related_name="location")
-
-	def immediate_setup(self):
-		"""
-			Run before everything else is ready, but make sure integrity is intact
-		:return:
-		"""
-
-		self.parcels = Parcels()  # trying a backward hack around a problem
-		self.parcels.save()
-		self.save()
-
-	def setup(self):
-		"""
-			setup must be run first on Suitability Analysis object!
-		"""
-
-		self.boundary_polygon = os.path.join(str(self.layers), self.boundary_polygon_name)
-
-		if self.search_area is None or self.search_area == "":
-			self.search_area = generate_gdb_filename("search_area", gdb=self.suitability_analysis.workspace)
-			geoprocessing_log.info("Running buffer or area boundary to find search area")
-			arcpy.Buffer_analysis(self.boundary_polygon, self.search_area, self.search_distance)
-
-		if self.parcels.layer is None or self.parcels.layer == "":
-			self.parcels.layer = generate_gdb_filename(self.region.parcels_name, gdb=self.layers)
-			geoprocessing_log.info("Copying parcels layer to location geodatabase")
-			print self.parcels.layer
-			arcpy.CopyFeatures_management(self.region.parcels, self.parcels.layer)
-			self.parcels.save()
-
-		self.save()
-
-	def __str__(self):
-		return unicode(self.name)
-
-	def __unicode__(self):
-		return unicode(self.name)
 
 
 class SuitabilityAnalysis(models.Model):
@@ -292,9 +277,16 @@ class SuitabilityAnalysis(models.Model):
 	working_directory = models.FilePathField(path=GEOSPATIAL_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 
+	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
+	parcels = models.OneToOneField(Parcels, related_name="suitability_analysis")
+
 	def setup(self):
 		self.working_directory = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
 		self.workspace = arcpy.CreateFileGDB_management(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
+
+		self.parcels = Parcels()  # pass in the parcels layer for setup
+		self.parcels.original_layer = self.location.region.parcels
+		self.parcels.save()
 		self.save()
 
 	def merge(self):
