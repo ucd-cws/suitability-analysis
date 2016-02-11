@@ -6,6 +6,7 @@ from django.contrib import admin
 # Create your models here.
 
 import six
+import sys
 import logging
 import os
 import shutil
@@ -16,6 +17,8 @@ processing_log = logging.getLogger("processing_log")
 geoprocessing_log = logging.getLogger("geoprocessing")
 
 import arcpy
+
+from FloodMitigation.settings import DEBUG
 
 from relocation.gis.temp import generate_gdb_filename
 
@@ -233,7 +236,8 @@ class Parcels(models.Model):
 
 	def setup(self):
 		self.duplicate_layer()  # copy the parcels out so that we can keep a fresh copy for reprocessing still
-		self.compute_distances()
+		self.compute_slopes()
+		self.compute_centroid_distances()
 		self.save()
 
 	def duplicate_layer(self):
@@ -248,7 +252,50 @@ class Parcels(models.Model):
 		self.layer = new_path
 		self.save()
 
-	def compute_distances(self):
+	def get_join_field(self):
+		"""
+			A special case occurs if the id_field is OBJECTID because ArcGIS renames the field to OBJECTID_1
+			This function provides that as a join field when applicable, and returns the original field otherwise
+		:return:
+		"""
+		if self.id_field == "OBJECTID":
+			return "OBJECTID_1"
+		else:
+			return self.id_field
+
+	def zonal_min_max_mean(self, raster, name):
+		"""
+			Extracts zonal statistics from a raster, and joins the min, max, and mean back to the parcels layer.
+			Given a raster and a name, fields will be named mean_{name}, min_{name}, and max_{name}
+		:param raster: An ArcGIS-compatible raster path
+		:param name: The name to suffix fields with
+		:return:
+		"""
+		arcpy.CheckOutExtension("Spatial")
+
+		geoprocessing_log.info("Running Zonal Statistics for {0:s}".format(name))
+		zonal_table = generate_gdb_filename(name_base="zonal_table")
+		arcpy.sa.ZonalStatisticsAsTable(self.layer, self.id_field, raster, zonal_table, statistics_type="MIN_MAX_MEAN")
+
+		join_field = self.get_join_field()
+		try:
+			geoprocessing_log.info("Joining {0:s} Zone Statistics to Parcels".format(name))
+			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MEAN", rename_attribute="mean_{0:s}".format(name))
+			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MIN", rename_attribute="min_{0:s}".format(name))
+			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MAX", rename_attribute="max_{0:s}".format(name))
+		except:
+			if not DEBUG:
+				geoprocessing_log.error("Unable to join zonal {0:s} back to parcels".format(name))
+			else:
+				six.reraise(*sys.exc_info())
+
+		arcpy.CheckInExtension("Spatial")
+
+	def compute_slopes(self):
+		self.zonal_min_max_mean(self.suitability_analysis.location.region.dem, "elevation")
+		self.zonal_min_max_mean(self.suitability_analysis.location.region.slope, "slope")
+
+	def compute_centroid_distances(self):
 		new_field_name = "centroid_distance_to_original_boundary"
 
 		if not self.layer:
@@ -263,7 +310,10 @@ class Parcels(models.Model):
 			processing_log.info("Permanent Join")
 			gis.permanent_join(self.layer, self.id_field, distance_information["table"], "INPUT_FID", "DISTANCE", new_field_name)  # INPUT_FID and DISTANCE are results of ArcGIS, so it's safe *enough* to hard-code them.
 		except:  # just trying to keep the whole program coming down if an exception is raised during processing
-			processing_log.error("Error attaching centroid distance information - this information is currently missing from the parcels - correct your inputs or the code and reprocess the centroid distnances, or this metric will be unavailable")
+			if not DEBUG:
+				processing_log.error("Error attaching centroid distance information - this information is currently missing from the parcels - correct your inputs or the code and reprocess the centroid distnances, or this metric will be unavailable")
+			else:
+				six.reraise(*sys.exc_info())
 
 
 class SuitabilityAnalysis(models.Model):
