@@ -155,8 +155,9 @@ class Region(models.Model):
 	def compute_floodplain_distance(self, cell_size=30):
 
 		arcpy.CheckOutExtension("Spatial")
-		stored_environments = gis.store_environments(["mask"])  # back up the existing settings for environment variables
+		stored_environments = gis.store_environments(["mask", "extent"])  # back up the existing settings for environment variables
 		arcpy.env.mask = self.dem  # set the analysis to only occur as large as the parcels layer
+		arcpy.env.extent = self.dem
 
 		geoprocessing_log.info("Computing Floodplain Distance")
 
