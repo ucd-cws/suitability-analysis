@@ -30,6 +30,7 @@ from relocation.gis import floodplain_areas
 from relocation.gis import census_places
 from relocation.gis import land_use
 from relocation.gis import roads
+from relocation.gis import geometry
 from relocation.gis import parcels
 
 from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
@@ -236,6 +237,7 @@ class Parcels(models.Model):
 
 	def setup(self):
 		self.duplicate_layer()  # copy the parcels out so that we can keep a fresh copy for reprocessing still
+		self.compute_centroid_elevation()
 		self.compute_slopes()
 		self.compute_centroid_distances()
 		self.save()
@@ -271,6 +273,8 @@ class Parcels(models.Model):
 		:param name: The name to suffix fields with
 		:return:
 		"""
+		self.check_values()
+
 		arcpy.CheckOutExtension("Spatial")
 
 		geoprocessing_log.info("Running Zonal Statistics for {0:s}".format(name))
@@ -291,18 +295,48 @@ class Parcels(models.Model):
 
 		arcpy.CheckInExtension("Spatial")
 
-	def compute_slopes(self):
-		self.zonal_min_max_mean(self.suitability_analysis.location.region.dem, "elevation")
-		self.zonal_min_max_mean(self.suitability_analysis.location.region.slope, "slope")
-
-	def compute_centroid_distances(self):
-		new_field_name = "centroid_distance_to_original_boundary"
-
+	def check_values(self):
+		"""
+			Just a way to check that we're ready to go since these fields aren't required initially.
+		:return:
+		"""
 		if not self.layer:
 			raise ValueError("Parcel layer (attribute: layer) is not defined - can't proceed with computations!")
 
 		if not self.id_field:
 			raise ValueError("Parcel ID/ObjectID field (attribute: id_field) is not defined - can't proceed with computations!")
+
+	def compute_slopes(self):
+		self.zonal_min_max_mean(self.suitability_analysis.location.region.dem, "elevation")
+		self.zonal_min_max_mean(self.suitability_analysis.location.region.slope, "slope")
+
+	def compute_centroid_elevation(self):
+
+		self.check_values()
+
+		arcpy.CheckOutExtension("Spatial")
+		new_field_name = "centroid_elevation"
+
+		processing_log.info("Computing Centroid Elevation")
+		centroids = geometry.get_centroids(self.layer, as_file=True, id_field=self.id_field)
+		elevation_points = generate_gdb_filename("elevation_points")
+		arcpy.sa.ExtractValuesToPoints(centroids, self.suitability_analysis.location.region.dem, elevation_points)
+
+		try:
+			processing_log.info("Permanent Join")
+			gis.permanent_join(self.layer, self.id_field, elevation_points, "ORIG_FID", "RASTERVALU", new_field_name)
+		except:
+			if not DEBUG:
+				processing_log.error("Error attaching centroid elevation information - this information is currently missing from the parcels - correct your inputs or the code and reprocess the parcels, or this metric will be unavailable")
+			else:
+				six.reraise(*sys.exc_info())
+
+		arcpy.CheckInExtension("Spatial")
+
+	def compute_centroid_distances(self):
+		new_field_name = "centroid_distance_to_original_boundary"
+
+		self.check_values()
 
 		processing_log.info("Centroid Near Distance")
 		distance_information = gis.centroid_near_distance(self.layer, self.suitability_analysis.location.boundary_polygon, self.id_field, self.suitability_analysis.location.search_distance)

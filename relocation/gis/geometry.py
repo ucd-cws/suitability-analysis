@@ -34,7 +34,7 @@ def get_centroids(feature=None, method="FEATURE_TO_POINT", dissolve=False, as_fi
 	:return: list of arcpy.Point objects
 	:raise:
 	"""
-	methods = ("FEATURE_TO_POINT","ATTRIBUTE",)  # "MEAN_CENTER","MEDIAN_CENTER")
+	methods = ("FEATURE_TO_POINT", "ATTRIBUTE",)  # "MEAN_CENTER","MEDIAN_CENTER")
 
 	if method not in methods:
 		geoprocessing_log.warning("Centroid determination method is not in the set {0:s}".format(methods))
@@ -47,7 +47,7 @@ def get_centroids(feature=None, method="FEATURE_TO_POINT", dissolve=False, as_fi
 		geoprocessing_log.warning("Type of feature in get_centroids is not Polygon")
 		return []
 
-	if dissolve:  # should we predissolve it?
+	if dissolve:  # should we pre-dissolve it?
 		t_name = generate_gdb_filename("dissolved", gdb="in_memory")
 		try:
 			arcpy.Dissolve_management(feature, t_name, multi_part=True)
@@ -79,7 +79,7 @@ def get_centroids(feature=None, method="FEATURE_TO_POINT", dissolve=False, as_fi
 		return points
 
 
-def check_type(feature = None ,feature_type = None,return_type = False):
+def check_type(feature=None,feature_type=None, return_type=False):
 	"""
 
 	:param feature:
