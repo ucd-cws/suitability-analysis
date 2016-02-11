@@ -4,7 +4,7 @@ import arcpy
 import logging
 import traceback
 
-from code_library.common.geospatial import generate_gdb_filename
+from relocation.gis.temp import generate_gdb_filename
 
 geoprocessing_log = logging.getLogger("geoprocessing")
 processing_log = logging.getLogger("processing")

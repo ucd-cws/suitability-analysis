@@ -2,8 +2,7 @@ __author__ = 'nickrsan'
 
 import arcpy
 
-from code_library.common import geospatial
-
+from relocation.gis.temp import generate_gdb_filename
 
 def convert_and_filter_by_code(raster_dataset, filter_value=0):
 	"""
@@ -17,17 +16,17 @@ def convert_and_filter_by_code(raster_dataset, filter_value=0):
 
 	arcpy.CheckOutExtension("Spatial")
 	null_raster = arcpy.sa.SetNull(raster_dataset, raster_dataset, where_clause="Value <> {0:s}".format(str(filter_value)))
-	raster_dataset = geospatial.generate_gdb_filename("raster")
+	raster_dataset = generate_gdb_filename("raster")
 	null_raster.save(raster_dataset)
 
-	raster_poly = geospatial.generate_gdb_filename("fil", scratch=True)
+	raster_poly = generate_gdb_filename("fil", scratch=True)
 	arcpy.RasterToPolygon_conversion(null_raster, raster_poly, simplify=False, raster_field="Value")
 
 	# remove polygons that we're not looking at (value == 1)
 	working_layer = "working_layer"
 	arcpy.MakeFeatureLayer_management(raster_poly, working_layer, where_clause="gridcode = {0:s}".format(str(filter_value)))  # load a feature layer and remove the polygons we're not interested in in a single step
 
-	final_poly = geospatial.generate_gdb_filename("polygon")
+	final_poly = generate_gdb_filename("polygon")
 	arcpy.CopyFeatures_management(working_layer, final_poly)
 
 	arcpy.CheckInExtension("Spatial")
@@ -51,7 +50,7 @@ def filter_small_patches(raster_dataset, patch_area=9000, area_length_ratio=4, f
 	del desc
 
 	# convert raster to polygon
-	raster_poly = geospatial.generate_gdb_filename("fil", scratch=True)
+	raster_poly = generate_gdb_filename("fil", scratch=True)
 	arcpy.RasterToPolygon_conversion(raster_dataset, raster_poly, simplify=False, raster_field="Value")
 
 	# remove polygons that we're not looking at (value == 1)
@@ -62,7 +61,7 @@ def filter_small_patches(raster_dataset, patch_area=9000, area_length_ratio=4, f
 	arcpy.SelectLayerByAttribute_management(working_layer, "NEW_SELECTION", where_clause="Shape_Area > {0:s}".format(patch_area))
 
 	# export to new layer for passing off to remove_non_compact_polys
-	first_filtered_poly = geospatial.generate_gdb_filename("filter_patches", scratch=True)
+	first_filtered_poly = generate_gdb_filename("filter_patches", scratch=True)
 	arcpy.CopyFeatures_management(working_layer, first_filtered_poly)
 	arcpy.Delete_management(working_layer)  # delete it, then create a new layer with the same name to pass to the next function
 
@@ -93,7 +92,7 @@ def remove_non_compact_polys(feature_layer, area_length_ratio=1):
 
 	# remove polygons that are too small (smaller than patch_area)
 	arcpy.SelectLayerByAttribute_management(feature_layer, "NEW_SELECTION", where_clause="ratio_field > {0:s}".format(area_length_ratio))
-	filtered_poly = geospatial.generate_gdb_filename("filter_patches", scratch=False)
+	filtered_poly = generate_gdb_filename("filter_patches", scratch=False)
 	arcpy.CopyFeatures_management(feature_layer, filtered_poly)
 
 	if delete_layer:

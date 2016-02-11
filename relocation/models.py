@@ -5,6 +5,7 @@ from django.contrib import admin
 
 # Create your models here.
 
+import six
 import logging
 import os
 import shutil
@@ -147,10 +148,10 @@ class Region(models.Model):
 		return layers
 
 	def __str__(self):
-		return unicode(self.name)
+		return six.b(self.name)
 
 	def __unicode__(self):
-		return unicode(self.name)
+		return six.u(self.name)
 		
 		
 class RegionForm(forms.ModelForm):
@@ -215,10 +216,10 @@ class Location(models.Model):
 		self.save()
 
 	def __str__(self):
-		return unicode(self.name)
+		return six.b(self.name)
 
 	def __unicode__(self):
-		return unicode(self.name)
+		return six.u(self.name)
 
 
 class Parcels(models.Model):
@@ -299,10 +300,10 @@ class SuitabilityAnalysis(models.Model):
 		return self.result
 
 	def __str__(self):
-		return unicode(self.name)
+		return self.name
 
 	def __unicode__(self):
-		return unicode(self.name)
+		return six.u(self.name)
 
 	def generate_mesh(self):
 		"""
@@ -355,10 +356,10 @@ class Constraint(InheritanceCastModel):
 		self.run()
 
 	def __str__(self):
-		return unicode(self.name)
+		return six.b(self.name)
 
 	def __unicode__(self):
-		return unicode(self.name)
+		return six.u(self.name)
 
 
 class UnionConstraint(Constraint):
@@ -407,10 +408,10 @@ class LandCoverChoice(models.Model):
 	value = models.IntegerField(choices=LAND_COVER_CHOICES, unique=True)
 
 	def __str__(self):
-		return unicode(self.value)
+		return six.b(self.value)
 
 	def __unicode__(self):
-		return unicode(self.value)
+		return six.u(self.value)
 
 
 class LandCoverConstraint(Constraint):

@@ -80,3 +80,30 @@ def get_temp_gdb():
 		return temp_gdb
 	else:
 		raise IOError("Couldn't create temp gdb or folder")
+
+
+def check_spatial_filename(filename=None, create_filename=True, check_exists=True, allow_fast = False):
+	'''usage: filename = check_spatial_filename(filename = None, create_filename = True, check_exists = True). Checks that we have a filename, optionally creates one, makes paths absolute,
+		and ensures that they don't exist yet when passed in. Caller may disable the check_exists (for speed) using check_exists = False
+	'''
+
+	if not filename and create_filename is True:
+		# if they didn't provide a filename and we're supposed to make one, then make one
+		if allow_fast:
+			return generate_gdb_filename(return_full=True, gdb="in_memory")
+		else:
+			return generate_gdb_filename(return_full=True)
+	elif not filename:
+		geoprocessing_log.warning("No filename to check provided, but create_filename is False")
+		return False
+
+	if os.path.isabs(filename):
+		rel_path = filename
+		filename = os.path.abspath(filename)
+		geoprocessing_log.warning("Transforming relative path %s to absolute path %s" % (rel_path,filename))
+
+	if check_exists and arcpy.Exists(filename):
+		geoprocessing_log.warning("Filename cannot already exist - found in check_spatial_filename")
+		return False
+
+	return filename

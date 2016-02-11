@@ -13,10 +13,10 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 
-from secrets import SECRET_KEY
+from FloodMitigation.secrets import SECRET_KEY
 
-import local_settings
-import gis
+from FloodMitigation import local_settings
+from FloodMitigation import gis
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

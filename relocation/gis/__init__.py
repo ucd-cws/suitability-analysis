@@ -7,14 +7,15 @@ import traceback
 
 import arcpy
 
-from code_library.common import geospatial
-from code_library.common.geospatial import geometry
+from relocation.gis import geometry
 
 processing_log = logging.getLogger("processing_log")
+geoprocessing_log = logging.getLogger("geoprocessing_log")
 
-import temp
+from relocation.gis import temp
 from FloodMitigation import local_settings
 temp.temp_gdb = local_settings.SCRATCH_GDB
+
 
 def create_working_directories(base_folder, folder_name):
 
@@ -74,7 +75,7 @@ def centroid_near_distance(feature_class, near_feature, id_field, search_radius=
 
 	temp_filename = arcpy.CreateScratchName("temp", workspace=r"C:\Users\dsx.AD3\Documents\ArcGIS\scratch.gdb")
 	processing_log.info("{0:s}".format(temp_filename))
-	point_file = geometry.write_features_from_list(centroids, "POINT", filename=geospatial.generate_gdb_filename(), spatial_reference=feature_class, write_ids=True)
+	point_file = geometry.write_features_from_list(centroids, "POINT", filename=temp.generate_gdb_filename(), spatial_reference=feature_class, write_ids=True)
 	processing_log.info("first centroids written")
 
 	near_centroid = geometry.get_centroids(near_feature, dissolve=False)  # merge, don't append
@@ -88,7 +89,7 @@ def centroid_near_distance(feature_class, near_feature, id_field, search_radius=
 	processing_log.info("second centroids written")
 
 	processing_log.info("Point File located at {0!s}".format(point_file))  # change back to info
-	out_table = geospatial.generate_gdb_filename("out_table", return_full=True)
+	out_table = temp.generate_gdb_filename("out_table", return_full=True)
 	processing_log.info("Output Table will be located at {0!s}".format(out_table))  # change back to info
 
 	try:

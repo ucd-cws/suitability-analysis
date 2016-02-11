@@ -4,7 +4,7 @@ import logging
 
 import arcpy
 
-from code_library.common.geospatial import generate_gdb_filename
+from relocation.gis.temp import generate_gdb_filename
 
 from relocation.gis import store_environments, reset_environments
 from relocation.gis import filter_patches

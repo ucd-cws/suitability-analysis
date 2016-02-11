@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from relocation import models
 
-from code_library.common.geospatial import generate_gdb_filename
+from relocation.gis.temp import generate_gdb_filename
 import arcpy
 
 import logging
