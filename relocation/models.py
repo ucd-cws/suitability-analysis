@@ -95,6 +95,7 @@ class Region(models.Model):
 
 	base_directory = models.FilePathField(path=REGIONS_DIRECTORY, max_length=255, allow_folders=True, allow_files=False)
 	layers = models.FilePathField(path=REGIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
+	derived_layers = models.FilePathField(path=REGIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 
 	# I was going to make it so all of these are required, but you could conceivably want to set up a region where
 	# some of these aren't needed and they just aren't available. Available constraint validation should occur
@@ -115,8 +116,9 @@ class Region(models.Model):
 	tiger_lines = models.FilePathField(null=True, blank=True, editable=False)
 	parcels_name = models.CharField(max_length=255, null=True, blank=True)
 	parcels = models.FilePathField(null=True, blank=True, editable=False)
+	floodplain_distance = models.FilePathField(null=True, blank=True, editable=True)
 
-	def setup(self):
+	def setup(self, do_all=True):
 		#if not (self.base_directory and self.layers):
 		#	self.base_directory, self.layers = gis.create_working_directories(REGIONS_DIRECTORY, self.short_name)
 
@@ -128,6 +130,44 @@ class Region(models.Model):
 		self.floodplain_areas = os.path.join(str(self.layers), self.floodplain_areas_name)
 		self.tiger_lines = os.path.join(str(self.layers), self.tiger_lines_name)
 		self.parcels = os.path.join(str(self.layers), self.parcels_name)
+		self.save()
+
+		if do_all:
+			self.process_derived()
+
+	def process_derived(self):
+		"""
+			Processes any necessary derived layers that should be precomputed based on input layers
+		:return:
+		"""
+		if not self.derived_layers:
+			derived_name = "derived.gdb"
+			if not os.path.exists(os.path.join(self.base_directory, derived_name)):
+				arcpy.CreateFileGDB_management(self.base_directory, derived_name)
+
+			self.derived_layers = os.path.join(self.base_directory, derived_name)
+			self.save()
+
+		self.compute_floodplain_distance()
+
+		self.save()
+
+	def compute_floodplain_distance(self, cell_size=30):
+
+		arcpy.CheckOutExtension("Spatial")
+		stored_environments = gis.store_environments(["mask"])  # back up the existing settings for environment variables
+		arcpy.env.mask = self.dem  # set the analysis to only occur as large as the parcels layer
+
+		geoprocessing_log.info("Computing Floodplain Distance")
+
+		distance_raster = generate_gdb_filename("floodplain_distance_raster", gdb=self.derived_layers)
+		distance_raster_unsaved = arcpy.sa.EucDistance(self.floodplain_areas, cell_size=cell_size)
+		distance_raster_unsaved.save(distance_raster)
+
+		gis.reset_environments(stored_environments=stored_environments)  # restore the environment variable settings to original values
+		arcpy.CheckInExtension("Spatial")
+
+		self.floodplain_distance = distance_raster
 		self.save()
 
 	def clean_working(self):
@@ -237,6 +277,7 @@ class Parcels(models.Model):
 
 	def setup(self):
 		self.duplicate_layer()  # copy the parcels out so that we can keep a fresh copy for reprocessing still
+		self.compute_distance_to_floodplain()
 		self.compute_centroid_elevation()
 		self.compute_slopes()
 		self.compute_centroid_distances()
@@ -313,7 +354,6 @@ class Parcels(models.Model):
 	def compute_centroid_elevation(self):
 
 		self.check_values()
-
 		arcpy.CheckOutExtension("Spatial")
 		new_field_name = "centroid_elevation"
 
@@ -348,6 +388,14 @@ class Parcels(models.Model):
 				processing_log.error("Error attaching centroid distance information - this information is currently missing from the parcels - correct your inputs or the code and reprocess the centroid distnances, or this metric will be unavailable")
 			else:
 				six.reraise(*sys.exc_info())
+
+	def compute_distance_to_floodplain(self):
+
+		self.check_values()
+
+		processing_log.info("Getting Distance To Floodplain")
+
+		self.zonal_min_max_mean(self.suitability_analysis.location.region.floodplain_distance, "distance_to_floodplain")
 
 
 class SuitabilityAnalysis(models.Model):
