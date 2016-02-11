@@ -8,6 +8,7 @@ import arcpy
 
 temp_folder = None
 temp_gdb = None
+raster_count = 0
 
 temp_datasets = []
 
@@ -59,7 +60,7 @@ def make_temp(override=False):
 		temp_gdb = os.path.join(temp_folder, "temp.gdb")
 		if not arcpy.Exists(temp_gdb):
 			if 'log' in sys.modules:
-				geoprocessing_log.write("Creating {0:s}".format(temp_gdb))
+				geoprocessing_log.info("Creating {0:s}".format(temp_gdb))
 			arcpy.CreateFileGDB_management(temp_folder, "temp.gdb")
 			return temp_folder, temp_gdb
 	except:

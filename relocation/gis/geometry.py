@@ -9,6 +9,7 @@ from relocation.gis import temp
 
 geoprocessing_log = logging.getLogger("geoprocessing")
 
+
 def isiterable(item):
 	"""tests whether an object is iterable
 
@@ -143,7 +144,7 @@ def write_features_from_list(data=None, data_type="POINT", filename=None, spatia
 		return False
 
 	path_parts = os.path.split(filename)
-	geoprocessing_log.write(str(path_parts))
+	geoprocessing_log.info(str(path_parts))
 	arcpy.CreateFeatureclass_management(path_parts[0],path_parts[1],data_type,'','','',spatial_reference)
 
 	if write_ids is True:  # if we're supposed to write out the IDs, add a field
@@ -154,11 +155,11 @@ def write_features_from_list(data=None, data_type="POINT", filename=None, spatia
 
 	valid_datatypes = (arcpy.Point, arcpy.Polygon, arcpy.Polyline, arcpy.Multipoint)
 
-	geoprocessing_log.write("writing shapes to %s" % filename)
+	geoprocessing_log.info("writing shapes to %s" % filename)
 	inserter = arcpy.InsertCursor(filename)
 	primary_datatype = None
 
-	geoprocessing_log.write("writing %s shapes" % len(data))
+	geoprocessing_log.info("writing %s shapes" % len(data))
 	#i=0
 	for feature in data:
 		cont_flag = True  # skip this by default if it's not a valid datatype
