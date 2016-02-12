@@ -1,8 +1,7 @@
 *.iml
 .idea/*
 *.pyc
-*.pyc
-FloodMitigation/__pycache__/settings.cpython-34.pyc
+*.cpython-34.pyc
 regions/*
 locations/*
 geospatial_analysis/*
@@ -15,3 +14,4 @@ relocation/migrations/*
 FloodMitigation/local_settings.py
 scratch/scratch.gdb/*
 log_db.sqlite3
+*.geojson

@@ -408,10 +408,13 @@ class Parcels(models.Model):
 			if not os.path.exists(geojson_folder):  # if the folder doesn't already exist
 				os.makedirs(geojson_folder)  # make it
 
-			output_file = os.path.join(geojson_folder, "{0:s}.geojson".format(self.id))  # set the full name of the output file
+			output_file = os.path.join(geojson_folder, "{0:d}.geojson".format(self.id))  # set the full name of the output file
 			geojson.file_gdb_layer_to_geojson(geodatabase, layer_name, output_file)  # run the convert
 		except:
-			geoprocessing_log.error("Unable to convert parcels layer to geojson")
+			if DEBUG:
+				six.reraise(*sys.exc_info())
+			else:
+				geoprocessing_log.error("Unable to convert parcels layer to geojson")
 
 
 class SuitabilityAnalysis(models.Model):
