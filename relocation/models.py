@@ -398,6 +398,9 @@ class Parcels(models.Model):
 
 		self.zonal_min_max_mean(self.suitability_analysis.location.region.floodplain_distance, "distance_to_floodplain")
 
+	def as_geojson(self):
+		pass
+
 
 class SuitabilityAnalysis(models.Model):
 	name = models.CharField(max_length=255, blank=False, null=False)
