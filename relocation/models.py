@@ -31,9 +31,10 @@ from relocation.gis import census_places
 from relocation.gis import land_use
 from relocation.gis import roads
 from relocation.gis import geometry
+from relocation.gis import geojson
 from relocation.gis import parcels
 
-from FloodMitigation.settings import GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
+from FloodMitigation.settings import BASE_DIR, GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
 
 MERGE_CHOICES = (("INTERSECT", "INTERSECT"), ("ERASE", "ERASE"), ("UNION", "UNION"), ("RASTER_ADD", "RASTER_ADD"))
 LAND_COVER_CHOICES = (
@@ -284,6 +285,8 @@ class Parcels(models.Model):
 		self.compute_centroid_distances()
 		self.save()
 
+		self.as_geojson()  # once processing is complete, export the geojson version so it's up to date.
+
 	def duplicate_layer(self):
 		"""
 			Duplicates the parcels layer into the suitability analysis so we always have the original copy
@@ -399,7 +402,16 @@ class Parcels(models.Model):
 		self.zonal_min_max_mean(self.suitability_analysis.location.region.floodplain_distance, "distance_to_floodplain")
 
 	def as_geojson(self):
-		pass
+		geodatabase, layer_name = os.path.split(self.layer)
+		try:
+			geojson_folder = os.path.join(BASE_DIR, "relocation", "static", "relocation", "geojson", "parcels")
+			if not os.path.exists(geojson_folder):  # if the folder doesn't already exist
+				os.makedirs(geojson_folder)  # make it
+
+			output_file = os.path.join(geojson_folder, "{0:s}.geojson".format(self.id))  # set the full name of the output file
+			geojson.file_gdb_layer_to_geojson(geodatabase, layer_name, output_file)  # run the convert
+		except:
+			geoprocessing_log.error("Unable to convert parcels layer to geojson")
 
 
 class SuitabilityAnalysis(models.Model):
