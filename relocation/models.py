@@ -323,7 +323,7 @@ class Parcels(models.Model):
 		arcpy.CheckOutExtension("Spatial")
 
 		geoprocessing_log.info("Running Zonal Statistics for {0:s}".format(name))
-		zonal_table = generate_gdb_filename(name_base="zonal_table")
+		zonal_table = generate_gdb_filename(name_base="zonal_table", scratch=True)
 		arcpy.sa.ZonalStatisticsAsTable(self.layer, self.id_field, raster, zonal_table, statistics_type="MIN_MAX_MEAN")
 
 		join_field = self.get_join_field()
@@ -363,7 +363,7 @@ class Parcels(models.Model):
 
 		processing_log.info("Computing Centroid Elevation")
 		centroids = geometry.get_centroids(self.layer, as_file=True, id_field=self.id_field)
-		elevation_points = generate_gdb_filename("elevation_points")
+		elevation_points = generate_gdb_filename("elevation_points", scratch=True)
 		arcpy.sa.ExtractValuesToPoints(centroids, self.suitability_analysis.location.region.dem, elevation_points)
 
 		try:
