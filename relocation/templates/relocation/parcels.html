@@ -1,0 +1,25 @@
+{% extends 'relocation/base.html' %}
+{% load staticfiles %}
+
+{% block head %}
+<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+    <h1>View Parcel Information - {{ parcels.suitability_analysis.name }}</h1>
+    <div class="row">
+    <div id="parcel_map" class="map col-md-12">
+
+    </div>
+    </div>
+{% endblock %}
+
+{% block footer %}
+    <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+    <script src="{% static 'relocation/js/leaflet_ajax/dist/leaflet.ajax.min.js' %}"></script>
+    <script src="{% static 'relocation/js/parcels.js' %}"></script>
+    <script language="JavaScript">
+        parcels = L.geoJson.ajax("{% static parcels.geojson %}").addTo(parcel_map);
+        parcel_map.fitBounds(parcels.getBounds());
+    </script>
+{% endblock %}

@@ -276,6 +276,7 @@ class Parcels(models.Model):
 	layer = models.FilePathField(null=True, blank=True, editable=True)
 	original_layer = models.FilePathField(null=True, blank=True, editable=True)
 	id_field = models.CharField(max_length=255, default="OBJECTID", null=True, blank=True)
+	geojson = models.URLField(null=True, blank=True)
 
 	def setup(self):
 		self.duplicate_layer()  # copy the parcels out so that we can keep a fresh copy for reprocessing still
@@ -405,11 +406,13 @@ class Parcels(models.Model):
 		geodatabase, layer_name = os.path.split(self.layer)
 		try:
 			geojson_folder = os.path.join(BASE_DIR, "relocation", "static", "relocation", "geojson", "parcels")
+			self.geojson = "relocation/geojson/parcels/{0:d}.geojson".format(self.id)
 			if not os.path.exists(geojson_folder):  # if the folder doesn't already exist
 				os.makedirs(geojson_folder)  # make it
 
 			output_file = os.path.join(geojson_folder, "{0:d}.geojson".format(self.id))  # set the full name of the output file
 			geojson.file_gdb_layer_to_geojson(geodatabase, layer_name, output_file)  # run the convert
+			self.save()
 		except:
 			if DEBUG:
 				six.reraise(*sys.exc_info())
