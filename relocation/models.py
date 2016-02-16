@@ -282,7 +282,7 @@ class Parcels(models.Model):
 		self.duplicate_layer()  # copy the parcels out so that we can keep a fresh copy for reprocessing still
 		self.compute_distance_to_floodplain()
 		self.compute_centroid_elevation()
-		self.compute_slopes()
+		self.compute_slope_and_elevation()
 		self.compute_centroid_distances()
 		self.save()
 
@@ -352,7 +352,7 @@ class Parcels(models.Model):
 		if not self.id_field:
 			raise ValueError("Parcel ID/ObjectID field (attribute: id_field) is not defined - can't proceed with computations!")
 
-	def compute_slopes(self):
+	def compute_slope_and_elevation(self):
 		self.zonal_min_max_mean(self.suitability_analysis.location.region.dem, "elevation")
 		self.zonal_min_max_mean(self.suitability_analysis.location.region.slope, "slope")
 
@@ -487,7 +487,6 @@ class SuitabilityAnalysis(models.Model):
 		arcpy.Intersect_analysis(in_features=[self.potential_suitable_areas, self.mesh], out_feature_class=split_areas)
 
 		return split_areas
-
 
 class Constraint(InheritanceCastModel):
 	"""
@@ -645,3 +644,56 @@ class ScoredConstraint(Constraint):
 		# See http://gis.stackexchange.com/questions/50169/how-to-standardize-raster-output-from-0-to-100-using-raster-algebra
 
 		pass
+
+
+class RelocatedTown(models.Model):
+	"""
+		A class for towns that have already successfully moved that helps us store attributes for
+	"""
+
+	name = models.TextField(null=False, blank=False)
+	centroid_elevation = models.DecimalField(null=True, blank=True)
+	centroid_distance = models.DecimalField(null=True, blank=True)
+	min_floodplain_distance = models.DecimalField(null=True, blank=True)
+	max_floodplain_distance = models.DecimalField(null=True, blank=True)
+	mean_floodplain_distance = models.DecimalField(null=True, blank=True)
+	min_elevation = models.DecimalField(null=True, blank=True)
+	max_elevation = models.DecimalField(null=True, blank=True)
+	mean_elevation = models.DecimalField(null=True, blank=True)
+	min_slope = models.DecimalField(null=True, blank=True)
+	max_slope = models.DecimalField(null=True, blank=True)
+	mean_slope = models.DecimalField(null=True, blank=True)
+
+	active = models.BooleanField(default=False)  #
+
+	def _validate(self):
+		"""
+			This function exists because when entering a town, we might want to allow some attributes to be missing,
+			but as of this writing a town needs to have all attributes in order to be usable.
+		:return:
+		"""
+		for attr in self._meta.get_all_field_names():
+			if self.__dict__[attr] is None or self.__dict__[attr] == "":  # if it's blank or null
+				raise ValueError("Field {0:s} is null or empty in Relocation Town {0:s} (id {0:d}). Must be resolved before this town can be used in the model".format(attr, self.name, self.id))
+
+	def prepare(self):
+		"""
+			Checks all the fields and ensures they are ready to be used. If not, deactivates the town
+		:return:
+		"""
+		try:
+			self._validate()
+			self.active = True
+		except ValueError:
+			processing_log.warning("Not using Relocation Town {0:s} due to missing attributes. Please fill in all attributes to proceed")
+			self.active = False
+			if DEBUG:
+				six.reraise(*sys.exc_info())
+
+		self.save()
+
+	def __str__(self):
+		return six.b(self.name)
+
+	def __unicode__(self):
+		return six.u(self.name)
