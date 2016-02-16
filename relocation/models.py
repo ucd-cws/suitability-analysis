@@ -238,6 +238,8 @@ class Location(models.Model):
 	boundary_polygon_name = models.CharField(max_length=255)
 	boundary_polygon = models.FilePathField(null=True, blank=True, recursive=True, max_length=255, allow_folders=True, allow_files=False, editable=False)
 
+	spatial_data = models.OneToOneField(PolygonStatistics, related_name="suitability_analysis")
+
 	search_distance = models.IntegerField(default=25000)  # meters
 	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
 
@@ -268,7 +270,7 @@ class Location(models.Model):
 		return six.u(self.name)
 
 
-class Parcels(models.Model):
+class PolygonStatistics(models.Model):
 	"""
 		A place to aggregate functions that operate on parcels
 	"""
@@ -433,13 +435,13 @@ class SuitabilityAnalysis(models.Model):
 	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 
 	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
-	parcels = models.OneToOneField(Parcels, related_name="suitability_analysis")
+	parcels = models.OneToOneField(PolygonStatistics, related_name="suitability_analysis")
 
 	def setup(self):
 		self.working_directory = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
 		self.workspace = arcpy.CreateFileGDB_management(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
 
-		self.parcels = Parcels()  # pass in the parcels layer for setup
+		self.parcels = PolygonStatistics()  # pass in the parcels layer for setup
 		self.parcels.original_layer = self.location.region.parcels
 		self.parcels.save()
 		self.save()
@@ -652,19 +654,19 @@ class RelocatedTown(models.Model):
 	"""
 
 	name = models.TextField(null=False, blank=False)
-	centroid_elevation = models.DecimalField(null=True, blank=True)
-	centroid_distance = models.DecimalField(null=True, blank=True)
-	min_floodplain_distance = models.DecimalField(null=True, blank=True)
-	max_floodplain_distance = models.DecimalField(null=True, blank=True)
-	mean_floodplain_distance = models.DecimalField(null=True, blank=True)
-	min_elevation = models.DecimalField(null=True, blank=True)
-	max_elevation = models.DecimalField(null=True, blank=True)
-	mean_elevation = models.DecimalField(null=True, blank=True)
-	min_slope = models.DecimalField(null=True, blank=True)
-	max_slope = models.DecimalField(null=True, blank=True)
-	mean_slope = models.DecimalField(null=True, blank=True)
+	centroid_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	centroid_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	min_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	max_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	mean_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	min_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	max_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	mean_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	min_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	max_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	mean_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 
-	active = models.BooleanField(default=False)  #
+	active = models.BooleanField(default=False)  # flag to indicate whether it can be used in an analysis
 
 	def _validate(self):
 		"""

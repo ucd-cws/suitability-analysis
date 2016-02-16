@@ -13,5 +13,5 @@ def home(request):
 
 def parcel_viewer(request, parcels_id):
 	template_name = 'relocation/parcels.html'
-	parcels = models.Parcels.objects.get(pk=parcels_id)
+	parcels = models.PolygonStatistics.objects.get(pk=parcels_id)
 	return render(request, template_name, context={'parcels': parcels})
