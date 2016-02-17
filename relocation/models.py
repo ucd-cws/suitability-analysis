@@ -227,49 +227,6 @@ class RegionAdmin(admin.ModelAdmin):
 	form = RegionForm
 	
 
-class Location(models.Model):
-	name = models.CharField(max_length=255)
-	short_name = models.SlugField(blank=False, null=False)
-	region = models.ForeignKey(Region, null=False)
-
-	working_directory = models.FilePathField(path=LOCATIONS_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
-	layers = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
-
-	boundary_polygon_name = models.CharField(max_length=255)
-	boundary_polygon = models.FilePathField(null=True, blank=True, recursive=True, max_length=255, allow_folders=True, allow_files=False, editable=False)
-
-	spatial_data = models.OneToOneField(PolygonStatistics, related_name="suitability_analysis")
-
-	search_distance = models.IntegerField(default=25000)  # meters
-	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
-
-	def setup(self):
-		"""
-			setup must be run first on Suitability Analysis object!
-		"""
-
-		self.boundary_polygon = os.path.join(str(self.layers), self.boundary_polygon_name)
-
-		if self.search_area is None or self.search_area == "":
-			self.search_area = generate_gdb_filename("search_area", gdb=self.suitability_analysis.workspace)
-			geoprocessing_log.info("Running buffer or area boundary to find search area")
-			arcpy.Buffer_analysis(self.boundary_polygon, self.search_area, self.search_distance)
-
-		if self.parcels.layer is None or self.parcels.layer == "":
-			self.parcels.layer = generate_gdb_filename(self.region.parcels_name, gdb=self.layers)
-			geoprocessing_log.info("Copying parcels layer to location geodatabase")
-			arcpy.CopyFeatures_management(self.region.parcels, self.parcels.layer)
-			self.parcels.save()
-
-		self.save()
-
-	def __str__(self):
-		return six.b(self.name)
-
-	def __unicode__(self):
-		return six.u(self.name)
-
-
 class PolygonStatistics(models.Model):
 	"""
 		A place to aggregate functions that operate on parcels
@@ -420,6 +377,62 @@ class PolygonStatistics(models.Model):
 				six.reraise(*sys.exc_info())
 			else:
 				geoprocessing_log.error("Unable to convert parcels layer to geojson")
+
+
+class Location(models.Model):
+	name = models.CharField(max_length=255)
+	short_name = models.SlugField(blank=False, null=False)
+	region = models.ForeignKey(Region, null=False)
+
+	working_directory = models.FilePathField(path=LOCATIONS_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
+	layers = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
+
+	boundary_polygon_name = models.CharField(max_length=255)
+	boundary_polygon = models.FilePathField(null=True, blank=True, recursive=True, max_length=255, allow_folders=True, allow_files=False, editable=False)
+
+	spatial_data = models.OneToOneField(PolygonStatistics, related_name="location")
+
+	search_distance = models.IntegerField(default=25000)  # meters
+	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
+
+	def initial(self):
+		"""
+			Need to set up relationships before we can save the object, so this function gets run first
+		:return:
+		"""
+		if not self.spatial_data:
+			self.spatial_data = PolygonStatistics()
+			self.spatial_data.original_layer = self.boundary_polygon
+			self.spatial_data.save()
+			self.save()
+
+	def setup(self):
+		"""
+			setup must be run first on Suitability Analysis object!
+		"""
+
+		self.boundary_polygon = os.path.join(str(self.layers), self.boundary_polygon_name)
+
+		if self.search_area is None or self.search_area == "":
+			self.search_area = generate_gdb_filename("search_area", gdb=self.suitability_analysis.workspace)
+			geoprocessing_log.info("Running buffer or area boundary to find search area")
+			arcpy.Buffer_analysis(self.boundary_polygon, self.search_area, self.search_distance)
+
+		if self.parcels.layer is None or self.parcels.layer == "":
+			self.parcels.layer = generate_gdb_filename(self.region.parcels_name, gdb=self.layers)
+			geoprocessing_log.info("Copying parcels layer to location geodatabase")
+			arcpy.CopyFeatures_management(self.region.parcels, self.parcels.layer)
+			self.parcels.save()
+
+		self.spatial_data.setup()  # extract the information to the boundary
+
+		self.save()
+
+	def __str__(self):
+		return six.b(self.name)
+
+	def __unicode__(self):
+		return six.u(self.name)
 
 
 class SuitabilityAnalysis(models.Model):
