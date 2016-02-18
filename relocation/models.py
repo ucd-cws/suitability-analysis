@@ -400,10 +400,12 @@ class Location(models.Model):
 			Need to set up relationships before we can save the object, so this function gets run first
 		:return:
 		"""
-		if not self.spatial_data:
-			self.spatial_data = PolygonStatistics()
-			self.spatial_data.original_layer = self.boundary_polygon
-			self.spatial_data.save()
+		try:  # check if the related object exists
+			self.spatial_data
+		except PolygonStatistics.DoesNotExist:  # if the object doesn't exist, then create it
+			spatial_data = PolygonStatistics()
+			spatial_data.save()
+			self.spatial_data = spatial_data
 			self.save()
 
 	def setup(self):
@@ -424,6 +426,7 @@ class Location(models.Model):
 			arcpy.CopyFeatures_management(self.region.parcels, self.parcels.layer)
 			self.parcels.save()
 
+		self.spatial_data.original_layer = self.boundary_polygon
 		self.spatial_data.setup()  # extract the information to the boundary
 
 		self.save()
@@ -450,14 +453,19 @@ class SuitabilityAnalysis(models.Model):
 	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
 	parcels = models.OneToOneField(PolygonStatistics, related_name="suitability_analysis")
 
-	def setup(self):
-		self.working_directory = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
-		self.workspace = arcpy.CreateFileGDB_management(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
+	def setup(self, force_create=False):
+		if not self.working_directory or not os.path.exists(self.working_directory) or force_create:
+			self.working_directory = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
+		if not self.workspace or not os.path.exists(self.workspace) or force_create:
+			self.workspace = arcpy.CreateFileGDB_management(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
 
-		self.parcels = PolygonStatistics()  # pass in the parcels layer for setup
-		self.parcels.original_layer = self.location.region.parcels
-		self.parcels.save()
-		self.save()
+		try:
+			self.parcels
+		except PolygonStatistics.DoesNotExist:
+			self.parcels = PolygonStatistics()  # pass in the parcels layer for setup
+			self.parcels.original_layer = self.location.region.parcels
+			self.parcels.save()
+			self.save()
 
 	def merge(self):
 		self.potential_suitable_areas = merge.merge_constraints(self.location.search_area, self.constraints.all(), self.workspace)

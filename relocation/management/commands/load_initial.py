@@ -55,7 +55,6 @@ def load_initial_data():
 	suitable.working_directory = r"C:\Users\dsx.AD3\Code\FloodMitigation\geospatial_analysis\southernillinois"
 	suitable.workspace = r"C:\Users\dsx.AD3\Code\FloodMitigation\geospatial_analysis\southernillinois\layers.gdb"
 	suitable.location = location
-	suitable.save()
 	suitable.setup()
 	suitable.save()
 
