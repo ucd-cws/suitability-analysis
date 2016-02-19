@@ -5,11 +5,12 @@ import arcpy
 import ogr
 
 from relocation.gis import temp
-
+from FloodMitigation.settings import REPROJECTION_ID
+from FloodMitigation.local_settings import RUN_GEOPROCESSING
 geoprocessing_log = logging.getLogger("geoprocessing")
 
 
-def file_gdb_layer_to_geojson(geodatabase, layer_name, outfile):
+def file_gdb_layer_to_geojson(geodatabase, layer_name, outfile, simplify=RUN_GEOPROCESSING):
 
 	geoprocessing_log.info("Converting layer to geojson")
 	if os.path.exists(os.path.join(outfile)):
@@ -18,7 +19,7 @@ def file_gdb_layer_to_geojson(geodatabase, layer_name, outfile):
 
 	geoprocessing_log.info("Reprojecting to web_mercator")
 	reprojected = temp.generate_gdb_filename(layer_name)
-	arcpy.Project_management(in_dataset=os.path.join(geodatabase, layer_name), out_dataset=reprojected, out_coor_system=arcpy.SpatialReference(3857))
+	arcpy.Project_management(in_dataset=os.path.join(geodatabase, layer_name), out_dataset=reprojected, out_coor_system=arcpy.SpatialReference(REPROJECTION_ID))
 
 	ogr.UseExceptions()
 

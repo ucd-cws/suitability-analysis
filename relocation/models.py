@@ -18,7 +18,7 @@ geoprocessing_log = logging.getLogger("geoprocessing")
 
 import arcpy
 
-from FloodMitigation.settings import DEBUG
+from FloodMitigation.local_settings import RUN_GEOPROCESSING
 
 from relocation.gis.temp import generate_gdb_filename
 
@@ -32,9 +32,8 @@ from relocation.gis import land_use
 from relocation.gis import roads
 from relocation.gis import geometry
 from relocation.gis import geojson
-from relocation.gis import parcels
 
-from FloodMitigation.settings import BASE_DIR, GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY
+from FloodMitigation.settings import BASE_DIR, GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY, DEBUG
 
 MERGE_CHOICES = (("INTERSECT", "INTERSECT"), ("ERASE", "ERASE"), ("UNION", "UNION"), ("RASTER_ADD", "RASTER_ADD"))
 LAND_COVER_CHOICES = (
@@ -163,8 +162,12 @@ class Region(models.Model):
 		geoprocessing_log.info("Computing Floodplain Distance")
 
 		distance_raster = generate_gdb_filename("floodplain_distance_raster", gdb=self.derived_layers)
-		distance_raster_unsaved = arcpy.sa.EucDistance(self.floodplain_areas, cell_size=cell_size)
-		distance_raster_unsaved.save(distance_raster)
+
+		if RUN_GEOPROCESSING:
+			distance_raster_unsaved = arcpy.sa.EucDistance(self.floodplain_areas, cell_size=cell_size)
+			distance_raster_unsaved.save(distance_raster)
+		else:
+			geoprocessing_log.warning("Skipping Geoprocessing for floodplain distance because RUN_GEOPROCESSING is False")
 
 		gis.reset_environments(stored_environments=stored_environments)  # restore the environment variable settings to original values
 		arcpy.CheckInExtension("Spatial")
@@ -237,12 +240,18 @@ class PolygonStatistics(models.Model):
 	id_field = models.CharField(max_length=255, default="OBJECTID", null=True, blank=True)
 	geojson = models.URLField(null=True, blank=True)
 
+	class Meta:
+		abstract = True
+
 	def setup(self):
 		self.duplicate_layer()  # copy the parcels out so that we can keep a fresh copy for reprocessing still
-		self.compute_distance_to_floodplain()
-		self.compute_centroid_elevation()
-		self.compute_slope_and_elevation()
-		self.compute_centroid_distances()
+		if RUN_GEOPROCESSING:
+			self.compute_distance_to_floodplain()
+			self.compute_centroid_elevation()
+			self.compute_slope_and_elevation()
+			self.compute_centroid_distances()
+		else:
+			geoprocessing_log.warning("Skipping Geoprocessing for parcels because RUN_GEOPROCESSING is False")
 		self.save()
 
 		self.as_geojson()  # once processing is complete, export the geojson version so it's up to date.
@@ -260,19 +269,6 @@ class PolygonStatistics(models.Model):
 		arcpy.CopyFeatures_management(self.original_layer, new_path)
 		self.layer = new_path
 		self.save()
-
-	def get_suitability_analysis(self):
-		try:
-			self.suitability_analysis
-			return self.suitability_analysis
-		except SuitabilityAnalysis.DoesNotExist:
-			try:
-				self.location
-				return self.location.suitability_analysis
-			except Location.DoesNotExist:
-				processing_log.error("Can't find related object to use for suitability analysis for PolygonStatistics")
-				six.reraise(*sys.exc_info())
-
 
 	def get_join_field(self):
 		"""
@@ -399,6 +395,16 @@ class PolygonStatistics(models.Model):
 				geoprocessing_log.error("Unable to convert parcels layer to geojson")
 
 
+class Parcels(PolygonStatistics):
+	def get_suitability_analysis(self):
+		return self.suitability_analysis
+
+
+class LocationInformation(PolygonStatistics):
+	def get_suitability_analysis(self):
+		return self.location.suitability_analysis
+
+
 class Location(models.Model):
 	name = models.CharField(max_length=255)
 	short_name = models.SlugField(blank=False, null=False)
@@ -410,7 +416,7 @@ class Location(models.Model):
 	boundary_polygon_name = models.CharField(max_length=255)
 	boundary_polygon = models.FilePathField(null=True, blank=True, recursive=True, max_length=255, allow_folders=True, allow_files=False, editable=False)
 
-	spatial_data = models.OneToOneField(PolygonStatistics, related_name="location")
+	spatial_data = models.OneToOneField(LocationInformation, related_name="location")
 
 	search_distance = models.IntegerField(default=25000)  # meters
 	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
@@ -422,8 +428,8 @@ class Location(models.Model):
 		"""
 		try:  # check if the related object exists
 			self.spatial_data
-		except PolygonStatistics.DoesNotExist:  # if the object doesn't exist, then create it
-			spatial_data = PolygonStatistics()
+		except LocationInformation.DoesNotExist:  # if the object doesn't exist, then create it
+			spatial_data = LocationInformation()
 			spatial_data.save()
 			self.spatial_data = spatial_data
 			self.save()
@@ -472,7 +478,7 @@ class SuitabilityAnalysis(models.Model):
 	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 
 	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
-	parcels = models.OneToOneField(PolygonStatistics, related_name="suitability_analysis")
+	parcels = models.OneToOneField(Parcels, related_name="suitability_analysis")
 
 	def setup(self, force_create=False):
 		if not self.working_directory or not os.path.exists(self.working_directory) or force_create:
@@ -484,8 +490,8 @@ class SuitabilityAnalysis(models.Model):
 
 		try:
 			self.parcels
-		except PolygonStatistics.DoesNotExist:
-			l_parcels = PolygonStatistics()  # pass in the parcels layer for setup
+		except Parcels.DoesNotExist:
+			l_parcels = Parcels()  # pass in the parcels layer for setup
 			l_parcels.original_layer = self.location.region.parcels
 			l_parcels.save()
 			self.parcels = l_parcels

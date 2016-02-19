@@ -33,6 +33,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# a code to use when looking up spatial references for web conversion - encodes for WGS 1984 and is accessed with arcpy.SpatialReference(REPROJECTION_ID)
+REPROJECTION_ID = 4326
 
 # Application definition
 
