@@ -6,11 +6,10 @@ import ogr
 
 from relocation.gis import temp
 from FloodMitigation.settings import REPROJECTION_ID
-from FloodMitigation.local_settings import RUN_GEOPROCESSING
 geoprocessing_log = logging.getLogger("geoprocessing")
 
 
-def file_gdb_layer_to_geojson(geodatabase, layer_name, outfile, simplify=RUN_GEOPROCESSING):
+def file_gdb_layer_to_geojson(geodatabase, layer_name, outfile):
 
 	geoprocessing_log.info("Converting layer to geojson")
 	if os.path.exists(os.path.join(outfile)):
@@ -30,8 +29,7 @@ def file_gdb_layer_to_geojson(geodatabase, layer_name, outfile, simplify=RUN_GEO
 
 	geojson_driver = ogr.GetDriverByName("GeoJSON")
 	geojson = geojson_driver.CreateDataSource(outfile)
-	geojson.SetPrecision(2)
 
 	geoprocessing_log.info("Writing out geojson file at {0:s}".format(new_layer_name))
 	layer = gdb.GetLayer(new_layer_name)
-	geojson.CopyLayer(layer, layer_name)
+	geojson.CopyLayer(layer, layer_name, options=["COORDINATE_PRECISION=4",])
