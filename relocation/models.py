@@ -253,11 +253,26 @@ class PolygonStatistics(models.Model):
 		:return:
 		"""
 
-		new_name = arcpy.CreateUniqueName(os.path.split(self.original_layer)[1], self.suitability_analysis.workspace)  # get me a new name in the same geodatabase
-		new_path = os.path.join(self.suitability_analysis.workspace, new_name)
+		suitability_analysis = self.get_suitability_analysis()
+
+		new_name = arcpy.CreateUniqueName(os.path.split(self.original_layer)[1], suitability_analysis.workspace)  # get me a new name in the same geodatabase
+		new_path = os.path.join(suitability_analysis.workspace, new_name)
 		arcpy.CopyFeatures_management(self.original_layer, new_path)
 		self.layer = new_path
 		self.save()
+
+	def get_suitability_analysis(self):
+		try:
+			self.suitability_analysis
+			return self.suitability_analysis
+		except SuitabilityAnalysis.DoesNotExist:
+			try:
+				self.location
+				return self.location.suitability_analysis
+			except Location.DoesNotExist:
+				processing_log.error("Can't find related object to use for suitability analysis for PolygonStatistics")
+				six.reraise(*sys.exc_info())
+
 
 	def get_join_field(self):
 		"""
@@ -312,19 +327,22 @@ class PolygonStatistics(models.Model):
 			raise ValueError("Parcel ID/ObjectID field (attribute: id_field) is not defined - can't proceed with computations!")
 
 	def compute_slope_and_elevation(self):
-		self.zonal_min_max_mean(self.suitability_analysis.location.region.dem, "elevation")
-		self.zonal_min_max_mean(self.suitability_analysis.location.region.slope, "slope")
+
+		suitability_analysis = self.get_suitability_analysis()
+		self.zonal_min_max_mean(suitability_analysis.location.region.dem, "elevation")
+		self.zonal_min_max_mean(suitability_analysis.location.region.slope, "slope")
 
 	def compute_centroid_elevation(self):
 
 		self.check_values()
+		suitability_analysis = self.get_suitability_analysis()
 		arcpy.CheckOutExtension("Spatial")
 		new_field_name = "centroid_elevation"
 
 		processing_log.info("Computing Centroid Elevation")
 		centroids = geometry.get_centroids(self.layer, as_file=True, id_field=self.id_field)
 		elevation_points = generate_gdb_filename("elevation_points", scratch=True)
-		arcpy.sa.ExtractValuesToPoints(centroids, self.suitability_analysis.location.region.dem, elevation_points)
+		arcpy.sa.ExtractValuesToPoints(centroids, suitability_analysis.location.region.dem, elevation_points)
 
 		try:
 			processing_log.info("Permanent Join")
@@ -341,9 +359,10 @@ class PolygonStatistics(models.Model):
 		new_field_name = "centroid_distance_to_original_boundary"
 
 		self.check_values()
+		suitability_analysis = self.get_suitability_analysis()
 
 		processing_log.info("Centroid Near Distance")
-		distance_information = gis.centroid_near_distance(self.layer, self.suitability_analysis.location.boundary_polygon, self.id_field, self.suitability_analysis.location.search_distance)
+		distance_information = gis.centroid_near_distance(self.layer, suitability_analysis.location.boundary_polygon, self.id_field, suitability_analysis.location.search_distance)
 		try:
 			processing_log.info("Permanent Join")
 			gis.permanent_join(self.layer, self.id_field, distance_information["table"], "INPUT_FID", "DISTANCE", new_field_name)  # INPUT_FID and DISTANCE are results of ArcGIS, so it's safe *enough* to hard-code them.
@@ -356,10 +375,11 @@ class PolygonStatistics(models.Model):
 	def compute_distance_to_floodplain(self):
 
 		self.check_values()
+		suitability_analysis = self.get_suitability_analysis()
 
 		processing_log.info("Getting Distance To Floodplain")
 
-		self.zonal_min_max_mean(self.suitability_analysis.location.region.floodplain_distance, "distance_to_floodplain")
+		self.zonal_min_max_mean(suitability_analysis.location.region.floodplain_distance, "distance_to_floodplain")
 
 	def as_geojson(self):
 		geodatabase, layer_name = os.path.split(self.layer)
@@ -420,11 +440,12 @@ class Location(models.Model):
 			geoprocessing_log.info("Running buffer or area boundary to find search area")
 			arcpy.Buffer_analysis(self.boundary_polygon, self.search_area, self.search_distance)
 
-		if self.parcels.layer is None or self.parcels.layer == "":
-			self.parcels.layer = generate_gdb_filename(self.region.parcels_name, gdb=self.layers)
-			geoprocessing_log.info("Copying parcels layer to location geodatabase")
-			arcpy.CopyFeatures_management(self.region.parcels, self.parcels.layer)
-			self.parcels.save()
+		# leaving the following code temporarily. I think it's no longer needed since we moved parcels to a different location
+		#if self.parcels.layer is None or self.parcels.layer == "":
+		#	self.parcels.layer = generate_gdb_filename(self.region.parcels_name, gdb=self.layers)
+		#	geoprocessing_log.info("Copying parcels layer to location geodatabase")
+		#	arcpy.CopyFeatures_management(self.region.parcels, self.parcels.layer)
+		#	self.parcels.save()
 
 		self.spatial_data.original_layer = self.boundary_polygon
 		self.spatial_data.setup()  # extract the information to the boundary
@@ -456,15 +477,18 @@ class SuitabilityAnalysis(models.Model):
 	def setup(self, force_create=False):
 		if not self.working_directory or not os.path.exists(self.working_directory) or force_create:
 			self.working_directory = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
+
+		self.workspace = os.path.join(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
 		if not self.workspace or not os.path.exists(self.workspace) or force_create:
-			self.workspace = arcpy.CreateFileGDB_management(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
+			arcpy.CreateFileGDB_management(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
 
 		try:
 			self.parcels
 		except PolygonStatistics.DoesNotExist:
-			self.parcels = PolygonStatistics()  # pass in the parcels layer for setup
-			self.parcels.original_layer = self.location.region.parcels
-			self.parcels.save()
+			l_parcels = PolygonStatistics()  # pass in the parcels layer for setup
+			l_parcels.original_layer = self.location.region.parcels
+			l_parcels.save()
+			self.parcels = l_parcels
 			self.save()
 
 	def merge(self):
