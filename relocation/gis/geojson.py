@@ -30,6 +30,7 @@ def file_gdb_layer_to_geojson(geodatabase, layer_name, outfile, simplify=RUN_GEO
 
 	geojson_driver = ogr.GetDriverByName("GeoJSON")
 	geojson = geojson_driver.CreateDataSource(outfile)
+	geojson.SetPrecision(2)
 
 	geoprocessing_log.info("Writing out geojson file at {0:s}".format(new_layer_name))
 	layer = gdb.GetLayer(new_layer_name)

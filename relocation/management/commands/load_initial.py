@@ -111,6 +111,7 @@ def load_initial_data():
 	first_roads_constraint.name = "TestRoadConstraint1"
 	first_roads_constraint.description = "test"
 	first_roads_constraint.constraint_manager = roads_constraint
+	first_roads_constraint.suitability_analysis = roads_constraint.suitability_analysis
 	first_roads_constraint.max_distance = "10000"
 	first_roads_constraint.where_clause = "MTFCC = \"S1100\""  # road type is highway
 	first_roads_constraint.save()
@@ -119,6 +120,7 @@ def load_initial_data():
 	second_roads_constraint.name = "TestRoadConstraint2"
 	second_roads_constraint.description = "test"
 	second_roads_constraint.constraint_manager = roads_constraint
+	second_roads_constraint.suitability_analysis = roads_constraint.suitability_analysis
 	second_roads_constraint.max_distance = "1000"
 	second_roads_constraint.where_clause = ""  # any road and testing a blank where clause
 	second_roads_constraint.save()

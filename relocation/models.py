@@ -543,7 +543,7 @@ class SuitabilityAnalysis(models.Model):
 
 class Constraint(InheritanceCastModel):
 	"""
-
+		TODO: This probably should have been a metaclass, but wasn't - possibly worth refactoring, but this allows access to all constraints in a nice way.
 	"""
 	enabled = models.BooleanField(default=True)
 	name = models.CharField(max_length=31)

@@ -10,6 +10,7 @@ from relocation import models
 
 admin.site.register(models.Region)
 admin.site.register(models.Location)
+admin.site.register(models.LocationInformation)
 admin.site.register(models.LocalSlopeConstraint)
 admin.site.register(models.LandCoverConstraint)
 admin.site.register(models.LandCoverChoice)
@@ -17,4 +18,4 @@ admin.site.register(models.ProtectedAreasConstraint)
 admin.site.register(models.CensusPlacesConstraint)
 admin.site.register(models.FloodplainAreasConstraint)
 admin.site.register(models.SuitabilityAnalysis)
-admin.site.register(models.PolygonStatistics)
+admin.site.register(models.Parcels)
