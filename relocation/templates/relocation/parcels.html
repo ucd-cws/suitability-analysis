@@ -20,6 +20,5 @@
     <script src="{% static 'relocation/js/parcels.js' %}"></script>
     <script language="JavaScript">
         parcels = L.geoJson.ajax("{% static parcels.geojson %}").addTo(parcel_map);
-        parcel_map.fitBounds(parcels.getBounds());
     </script>
 {% endblock %}

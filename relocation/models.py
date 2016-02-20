@@ -380,8 +380,8 @@ class PolygonStatistics(models.Model):
 	def as_geojson(self):
 		geodatabase, layer_name = os.path.split(self.layer)
 		try:
-			geojson_folder = os.path.join(BASE_DIR, "relocation", "static", "relocation", "geojson", "parcels")
-			self.geojson = "relocation/geojson/parcels/{0:d}.geojson".format(self.id)
+			geojson_folder = os.path.join(BASE_DIR, "relocation", "static", "relocation", "geojson", self.static_folder)
+			self.geojson = "relocation/geojson/{0:s}/{1:d}.geojson".format(self.static_folder, self.id)
 			if not os.path.exists(geojson_folder):  # if the folder doesn't already exist
 				os.makedirs(geojson_folder)  # make it
 
@@ -396,11 +396,17 @@ class PolygonStatistics(models.Model):
 
 
 class Parcels(PolygonStatistics):
+
+	static_folder = "parcels"
+
 	def get_suitability_analysis(self):
 		return self.suitability_analysis
 
 
 class LocationInformation(PolygonStatistics):
+
+	static_folder = "location"
+
 	def get_suitability_analysis(self):
 		return self.location.suitability_analysis
 
