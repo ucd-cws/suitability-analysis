@@ -262,10 +262,10 @@ class PolygonStatistics(models.Model):
 		:return:
 		"""
 
-		suitability_analysis = self.get_suitability_analysis()
+		analysis = self.get_analysis_object()
 
-		new_name = arcpy.CreateUniqueName(os.path.split(self.original_layer)[1], suitability_analysis.workspace)  # get me a new name in the same geodatabase
-		new_path = os.path.join(suitability_analysis.workspace, new_name)
+		new_name = arcpy.CreateUniqueName(os.path.split(self.original_layer)[1], analysis.workspace)  # get me a new name in the same geodatabase
+		new_path = os.path.join(analysis.workspace, new_name)
 		arcpy.CopyFeatures_management(self.original_layer, new_path)
 		self.layer = new_path
 		self.save()
@@ -324,21 +324,21 @@ class PolygonStatistics(models.Model):
 
 	def compute_slope_and_elevation(self):
 
-		suitability_analysis = self.get_suitability_analysis()
-		self.zonal_min_max_mean(suitability_analysis.location.region.dem, "elevation")
-		self.zonal_min_max_mean(suitability_analysis.location.region.slope, "slope")
+		analysis = self.get_analysis_object()
+		self.zonal_min_max_mean(analysis.location.region.dem, "elevation")
+		self.zonal_min_max_mean(analysis.location.region.slope, "slope")
 
 	def compute_centroid_elevation(self):
 
 		self.check_values()
-		suitability_analysis = self.get_suitability_analysis()
+		analysis = self.get_analysis_object()
 		arcpy.CheckOutExtension("Spatial")
 		new_field_name = "centroid_elevation"
 
 		processing_log.info("Computing Centroid Elevation")
 		centroids = geometry.get_centroids(self.layer, as_file=True, id_field=self.id_field)
 		elevation_points = generate_gdb_filename("elevation_points", scratch=True)
-		arcpy.sa.ExtractValuesToPoints(centroids, suitability_analysis.location.region.dem, elevation_points)
+		arcpy.sa.ExtractValuesToPoints(centroids, analysis.location.region.dem, elevation_points)
 
 		try:
 			processing_log.info("Permanent Join")
@@ -355,10 +355,10 @@ class PolygonStatistics(models.Model):
 		new_field_name = "centroid_distance_to_original_boundary"
 
 		self.check_values()
-		suitability_analysis = self.get_suitability_analysis()
+		analysis = self.get_analysis_object()
 
 		processing_log.info("Centroid Near Distance")
-		distance_information = gis.centroid_near_distance(self.layer, suitability_analysis.location.boundary_polygon, self.id_field, suitability_analysis.location.search_distance)
+		distance_information = gis.centroid_near_distance(self.layer, analysis.location.boundary_polygon, self.id_field, analysis.location.search_distance)
 		try:
 			processing_log.info("Permanent Join")
 			gis.permanent_join(self.layer, self.id_field, distance_information["table"], "INPUT_FID", "DISTANCE", new_field_name)  # INPUT_FID and DISTANCE are results of ArcGIS, so it's safe *enough* to hard-code them.
@@ -371,11 +371,11 @@ class PolygonStatistics(models.Model):
 	def compute_distance_to_floodplain(self):
 
 		self.check_values()
-		suitability_analysis = self.get_suitability_analysis()
+		analysis = self.get_analysis_object()
 
 		processing_log.info("Getting Distance To Floodplain")
 
-		self.zonal_min_max_mean(suitability_analysis.location.region.floodplain_distance, "distance_to_floodplain")
+		self.zonal_min_max_mean(analysis.location.region.floodplain_distance, "distance_to_floodplain")
 
 	def as_geojson(self):
 		geodatabase, layer_name = os.path.split(self.layer)
@@ -399,7 +399,7 @@ class Parcels(PolygonStatistics):
 
 	static_folder = "parcels"
 
-	def get_suitability_analysis(self):
+	def get_analysis_object(self):
 		return self.suitability_analysis
 
 
@@ -407,7 +407,7 @@ class LocationInformation(PolygonStatistics):
 
 	static_folder = "location"
 
-	def get_suitability_analysis(self):
+	def get_analysis_object(self):
 		return self.location.suitability_analysis
 
 
@@ -471,28 +471,46 @@ class Location(models.Model):
 		return six.u(self.name)
 
 
-class SuitabilityAnalysis(models.Model):
+class Analysis(models.Model):
+
 	name = models.CharField(max_length=255, blank=False, null=False)
 	short_name = models.SlugField(blank=False, null=False)
-
-	location = models.OneToOneField(Location, related_name="suitability_analysis")
-	result = models.FilePathField(null=True, blank=True)
-	potential_suitable_areas = models.FilePathField(null=True, blank=True)
-	split_potential_areas = models.FilePathField(null=True, blank=True)
 
 	working_directory = models.FilePathField(path=GEOSPATIAL_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 
-	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
-	parcels = models.OneToOneField(Parcels, related_name="suitability_analysis")
+	class Meta:
+		abstract = True
 
-	def setup(self, force_create=False):
+	def setup_working_dirs(self, force_create=False):
 		if not self.working_directory or not os.path.exists(self.working_directory) or force_create:
 			self.working_directory = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
 
 		self.workspace = os.path.join(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
 		if not self.workspace or not os.path.exists(self.workspace) or force_create:
 			arcpy.CreateFileGDB_management(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
+
+	def __str__(self):
+		return self.name
+
+	def __unicode__(self):
+		return six.u(self.name)
+
+
+class SuitabilityAnalysis(Analysis):
+
+	result = models.FilePathField(null=True, blank=True)
+	potential_suitable_areas = models.FilePathField(null=True, blank=True)
+	split_potential_areas = models.FilePathField(null=True, blank=True)
+
+	location = models.OneToOneField(Location, related_name="suitability_analysis")
+
+	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
+	parcels = models.OneToOneField(Parcels, related_name="suitability_analysis")
+
+	def setup(self, force_create=False):
+
+		self.setup_working_dirs(force_create=force_create)
 
 		try:
 			self.parcels
@@ -511,12 +529,6 @@ class SuitabilityAnalysis(models.Model):
 		self.save()
 
 		return self.result
-
-	def __str__(self):
-		return self.name
-
-	def __unicode__(self):
-		return six.u(self.name)
 
 	def generate_mesh(self):
 		"""
@@ -705,12 +717,47 @@ class ScoredConstraint(Constraint):
 		pass
 
 
-class RelocatedTown(models.Model):
+class RelocatedTown(Analysis):
 	"""
 		A class for towns that have already successfully moved that helps us store attributes for
+
+		It's important that key attributes on this model remain the same as key attributes on the suitability analysis because
+		we're going to reference this model *as* the suitability analysis from polygon statistics. So it should behave a bit like one.
+		It could be worth finding some core set of functionality to subclass the two from.
 	"""
 
-	name = models.TextField(null=False, blank=False)
+	year_relocated = models.IntegerField(null=True, blank=True)
+	location = models.OneToOneField(Location, related_name="relocated_town")
+
+	# snapshots = relation to RelocationStatistics objects
+
+	# TODO: This method needs to be refactored based on the changes to this object and its relationships
+	def load_from_dict(self, dictionary, raise_errors=False):
+		"""
+			Given a dictionary (such as a row from a dictreader), this sets the values on this object to match the named fields in the dict
+		:param dictionary:
+		:return:
+		"""
+		for attr in self._meta.get_all_field_names():
+			try:
+				setattr(self, attr, dictionary[attr])
+			except KeyError:  # if the dictionary doesn't have this attribute
+				processing_log.warning("Couldn't get attribute {0:s} from dictionary - make sure fields in the spreadsheet are named appropriately and values are defined")
+				if raise_errors or DEBUG:
+					six.reraise(*sys.exc_info())
+
+	def __str__(self):
+		return six.b(self.name)
+
+	def __unicode__(self):
+		return six.u(self.name)
+
+
+class RelocationStatistics(PolygonStatistics):
+	year = models.IntegerField(null=True, blank=True)
+	boundary_polygon = models.FilePathField(allow_files=True, allow_folders=False)  # TODO: Might not be necessary through location connection
+
+	# TODO: these attributes might get moved up to PolygonStatistics at some point along with a function to extract them from the layer
 	centroid_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	centroid_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	min_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
@@ -722,8 +769,14 @@ class RelocatedTown(models.Model):
 	min_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	max_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	mean_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-
 	active = models.BooleanField(default=False)  # flag to indicate whether it can be used in an analysis
+
+	static_folder = "relocation_towns"
+
+	town = models.ForeignKey(RelocatedTown, related_name="snapshots")
+
+	def get_analysis_object(self):
+		return self.town
 
 	def _validate(self):
 		"""
@@ -732,7 +785,7 @@ class RelocatedTown(models.Model):
 		:return:
 		"""
 		for attr in self._meta.get_all_field_names():
-			if self.__dict__[attr] is None or self.__dict__[attr] == "":  # if it's blank or null
+			if getattr(self, attr) is None or getattr(self, attr) == "":  # if it's blank or null
 				raise ValueError("Field {0:s} is null or empty in Relocation Town {0:s} (id {0:d}). Must be resolved before this town can be used in the model".format(attr, self.name, self.id))
 
 	def prepare(self):
@@ -751,8 +804,3 @@ class RelocatedTown(models.Model):
 
 		self.save()
 
-	def __str__(self):
-		return six.b(self.name)
-
-	def __unicode__(self):
-		return six.u(self.name)
