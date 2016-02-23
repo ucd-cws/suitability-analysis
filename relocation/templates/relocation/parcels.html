@@ -19,9 +19,11 @@
     <script src="{% static 'relocation/js/leaflet_ajax/dist/leaflet.ajax.min.js' %}"></script>
     <script src="{% static 'relocation/js/parcels.js' %}"></script>
     <script language="JavaScript">
+
         var parcels = new L.geoJson.ajax("{% static "relocation/geojson/parcels/3.geojson" %}").addTo(parcel_map);
         parcels.on('layeradd', function (e) {
              parcel_map.fitBounds(parcels.getBounds());
         });
+
     </script>
 {% endblock %}
