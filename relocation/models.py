@@ -238,7 +238,7 @@ class PolygonStatistics(models.Model):
 	layer = models.FilePathField(null=True, blank=True, editable=True)
 	original_layer = models.FilePathField(null=True, blank=True, editable=True)
 	id_field = models.CharField(max_length=255, default="OBJECTID", null=True, blank=True)
-	geojson = models.URLField(null=True, blank=True)
+	geojson = models.URLField(null=True, blank=True,)
 
 	class Meta:
 		abstract = True
