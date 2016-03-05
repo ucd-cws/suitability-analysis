@@ -32,6 +32,7 @@ from relocation.gis import land_use
 from relocation.gis import roads
 from relocation.gis import geometry
 from relocation.gis import geojson
+from relocation.gis import concave_hull
 
 from FloodMitigation.settings import BASE_DIR, GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY, DEBUG
 
@@ -114,14 +115,40 @@ class Region(models.Model):
 	floodplain_areas = models.FilePathField(null=True, blank=True, editable=False)
 	tiger_lines_name = models.CharField(max_length=255, )
 	tiger_lines = models.FilePathField(null=True, blank=True, editable=False)
+	rivers_name = models.CharField(max_length=255, )
+	rivers = models.FilePathField(null=True, blank=True, editable=False)
 	parcels_name = models.CharField(max_length=255, null=True, blank=True)
 	parcels = models.FilePathField(null=True, blank=True, editable=False)
 	floodplain_distance = models.FilePathField(null=True, blank=True, editable=True)
 
-	def setup(self, do_all=True):
-		#if not (self.base_directory and self.layers):
-		#	self.base_directory, self.layers = gis.create_working_directories(REGIONS_DIRECTORY, self.short_name)
+	def make(self, name, short_name, dem=None, slope=None, nlcd=None, census_places=None, protected_areas=None,
+			 floodplain_areas=None, tiger_lines=None, parcels=None, layers=None, base_directory=None, crs_string=None):
+		"""
+			provides args and then runs setup
+		:return:
+		"""
+		self.name = name
+		self.short_name = short_name
+		self.crs_string = crs_string
 
+		self.layers = layers
+		self.base_directory = base_directory
+
+		self.dem = dem
+		self.slope = slope
+		self.nlcd = nlcd
+		self.census_places = census_places
+		self.protected_areas = protected_areas
+		self.floodplain_areas = floodplain_areas
+		self.tiger_lines = tiger_lines
+
+		self.parcels = parcels
+		self.save()
+
+		self.setup(process_paths_from_name=False)
+		self.save()
+
+	def _base_setup(self):
 		self.dem = os.path.join(str(self.layers), self.dem_name)
 		self.slope = os.path.join(str(self.layers), self.slope_name)
 		self.nlcd = os.path.join(str(self.layers), self.nlcd_name)
@@ -131,6 +158,19 @@ class Region(models.Model):
 		self.tiger_lines = os.path.join(str(self.layers), self.tiger_lines_name)
 		self.parcels = os.path.join(str(self.layers), self.parcels_name)
 		self.save()
+
+	def setup(self, process_paths_from_name=True, do_all=True):
+		"""
+			Process paths from name flag indicates whether or not to take the {variable}_name fields and turn them into full paths to put in the {variable} fields.
+		:param process_paths_from_name:
+		:param do_all:
+		:return:
+		"""
+		#if not (self.base_directory and self.layers):
+		#	self.base_directory, self.layers = gis.create_working_directories(REGIONS_DIRECTORY, self.short_name)
+
+		if process_paths_from_name:
+			self._base_setup()
 
 		if do_all:
 			self.process_derived()
@@ -300,9 +340,9 @@ class PolygonStatistics(models.Model):
 		join_field = self.get_join_field()
 		try:
 			geoprocessing_log.info("Joining {0:s} Zone Statistics to Parcels".format(name))
-			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MEAN", rename_attribute="mean_{0:s}".format(name))
-			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MIN", rename_attribute="min_{0:s}".format(name))
-			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MAX", rename_attribute="max_{0:s}".format(name))
+			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MEAN", rename_attribute="stat_mean_{0:s}".format(name))
+			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MIN", rename_attribute="stat_min_{0:s}".format(name))
+			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MAX", rename_attribute="stat_max_{0:s}".format(name))
 		except:
 			if not DEBUG:
 				geoprocessing_log.error("Unable to join zonal {0:s} back to parcels".format(name))
@@ -333,7 +373,7 @@ class PolygonStatistics(models.Model):
 		self.check_values()
 		analysis = self.get_analysis_object()
 		arcpy.CheckOutExtension("Spatial")
-		new_field_name = "centroid_elevation"
+		new_field_name = "stat_centroid_elevation"
 
 		processing_log.info("Computing Centroid Elevation")
 		centroids = geometry.get_centroids(self.layer, as_file=True, id_field=self.id_field)
@@ -352,7 +392,7 @@ class PolygonStatistics(models.Model):
 		arcpy.CheckInExtension("Spatial")
 
 	def compute_centroid_distances(self):
-		new_field_name = "centroid_distance_to_original_boundary"
+		new_field_name = "stat_centroid_distance_to_original_boundary"
 
 		self.check_values()
 		analysis = self.get_analysis_object()
@@ -411,6 +451,28 @@ class LocationInformation(PolygonStatistics):
 		return self.location.suitability_analysis
 
 
+class PolygonData(models.Model):
+
+	feature_class = models.ForeignKey(LocationInformation, related_name="features")
+
+	objectid = models.IntegerField()
+	name = models.CharField(max_length=100)
+
+	#TODO: Check that these field names match what's being generated on PolygonStatistics
+	# fields starting with stat will be dumped to csvs - these will match the field names from the attribute table, so they can be pulled in by a generic function
+	stat_min_elevation = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+	stat_max_elevation = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+	stat_mean_elevation = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+	stat_min_slope = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+	stat_max_slope = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+	stat_mean_slope = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+	stat_centroid_elevation = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+
+	stat_min_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+	stat_max_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+	stat_mean_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+
+
 class Location(models.Model):
 	name = models.CharField(max_length=255)
 	short_name = models.SlugField(blank=False, null=False)
@@ -445,7 +507,8 @@ class Location(models.Model):
 			setup must be run first on Suitability Analysis object!
 		"""
 
-		self.boundary_polygon = os.path.join(str(self.layers), self.boundary_polygon_name)
+		if not self.boundary_polygon or self.boundary_polygon == "":
+			self.boundary_polygon = os.path.join(str(self.layers), self.boundary_polygon_name)
 
 		if self.search_area is None or self.search_area == "":
 			self.search_area = generate_gdb_filename("search_area", gdb=self.suitability_analysis.workspace)
@@ -727,9 +790,73 @@ class RelocatedTown(Analysis):
 	"""
 
 	year_relocated = models.IntegerField(null=True, blank=True)
-	location = models.OneToOneField(Location, related_name="relocated_town")
+	before_structures = models.FilePathField(null=True, blank=True)
+	after_structures = models.FilePathField(null=True, blank=True)
+	before_location = models.OneToOneField(Location, related_name="relocated_town_before")
+	moved_location = models.OneToOneField(Location, related_name="relocated_town_after")
 
 	# snapshots = relation to RelocationStatistics objects
+
+	def setup(self, name, before, after, region, make_boundaries_from_structures=False, buffer_distance=100):
+		"""
+			Creates the sub-location objects and attaches them here
+		:param name: Name of the city - locations will be based on this
+		:param before_poly:
+		:param after_poly:
+		:param region: Region object that this town/region will be attached to.
+		:return:
+		"""
+
+		self.name = name
+
+		if make_boundaries_from_structures:
+			before_poly = self.before_location.boundary_polygon = self._make_boundary(self.before_structures, buffer_distance)
+			after_poly = self.after_location.boundary_polygon = self._make_boundary(self.before_structures, buffer_distance)
+		else:
+			before_poly = before
+			after_poly = after
+
+		self._make_location(before_poly, region)
+		self._make_location(after_poly, region)
+		self.save()
+
+	def _make_boundary(self, features, buffer_distance, k=15):
+		"""
+			generates the boundary for an individual set of structures
+		:param features:
+		:param buffer_distance:
+		:param k:
+		:return:
+		"""
+		new_layer = generate_gdb_filename(gdb="in_memory", scratch=True)
+		try:
+			try:
+				concave_hull.concave_hull(features, k=k, out_fc=new_layer)
+			except:
+				geoprocessing_log.error("Failed to generate polygon boundary for town {0:s} (concave_hull)".format(self.name))
+				if DEBUG:
+					six.reraise(*sys.exc_info())
+
+			final_layer = generate_gdb_filename("{0:s}_boundary", gdb=self.workspace,)
+			arcpy.Buffer_analysis(new_layer, final_layer, buffer_distance)
+		finally:  # clean up layers
+			try:
+				arcpy.Delete_management(new_layer)
+			except:  # doesn't matter if it fails, just log it
+				geoprocessing_log.warn("failed to clean up in_memory workspace and delete concave hull generated boundary")
+
+		return final_layer
+
+	def _make_location(self, polygon, region):
+		location = Location()
+		location.initial()
+		location.boundary_polygon = polygon
+		location.region = region
+		location.name = self.name
+		location.short_name = self.name.replace(" ", "-")  # TODO: See if there's a better django way to sanitize all URL character (',etc)
+		location.setup()
+		location.save()
+		self.before_location = location
 
 	# TODO: This method needs to be refactored based on the changes to this object and its relationships
 	def load_from_dict(self, dictionary, raise_errors=False):
@@ -747,10 +874,10 @@ class RelocatedTown(Analysis):
 					six.reraise(*sys.exc_info())
 
 	def __str__(self):
-		return six.b(self.name)
+		return six.u("Relocated Town: {0:s}".format(self.name))
 
 	def __unicode__(self):
-		return six.u(self.name)
+		return six.u("Relocated Town: {0:s}".format(self.name))
 
 
 class RelocationStatistics(PolygonStatistics):

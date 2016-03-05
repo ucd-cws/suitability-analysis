@@ -1,10 +1,14 @@
 __author__ = 'dsx'
 
+import os
+import csv
+
 from django.core.management.base import BaseCommand, CommandError
 
 from relocation.models import SuitabilityAnalysis, Location, Region
 from relocation import models
 
+from FloodMitigation.settings import BASE_DIR
 
 class Command(BaseCommand):
 	"""
@@ -20,6 +24,25 @@ class Command(BaseCommand):
 
 
 def load_initial_data():
+
+	csv_file = os.path.join(BASE_DIR, "regions", "region_load.csv")
+
+	with open(csv_file, 'r') as csv_open:
+		csv_records = csv.DictReader(csv_open)
+
+		for record in csv_records:
+			region = Region()
+			for key in record.keys():
+				record[key] = record[key].replace("{{BASE_DIR}}", BASE_DIR)  # replace the base directory in the paths
+			region.make(**record)  # pass the record in to "make" as kwargs
+
+	return  # TODO: THIS IS TEMPORARY
+
+	# read csv in to dict reader
+	# loop through dict reader, creating objects
+
+	region = Region()
+
 	region = Region()
 	region.name = "Southern Illinois"
 	region.short_name = "southernillinois"
