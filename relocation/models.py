@@ -33,6 +33,8 @@ from relocation.gis import roads
 from relocation.gis import geometry
 from relocation.gis import geojson
 from relocation.gis import concave_hull
+from relocation.gis import parcels
+from relocation.gis import conversion
 
 from FloodMitigation.settings import BASE_DIR, GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY, DEBUG
 
@@ -93,6 +95,7 @@ class Region(models.Model):
 	name = models.CharField(max_length=255, blank=False, null=False)
 	short_name = models.SlugField(blank=False, null=False)
 	crs_string = models.TextField(null=False, blank=False)
+	extent_polygon = models.FilePathField(null=True, blank=True, editable=False)
 
 	base_directory = models.FilePathField(path=REGIONS_DIRECTORY, max_length=255, allow_folders=True, allow_files=False)
 	layers = models.FilePathField(path=REGIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
@@ -119,7 +122,10 @@ class Region(models.Model):
 	rivers = models.FilePathField(null=True, blank=True, editable=False)
 	parcels_name = models.CharField(max_length=255, null=True, blank=True)
 	parcels = models.FilePathField(null=True, blank=True, editable=False)
+
 	floodplain_distance = models.FilePathField(null=True, blank=True, editable=True)
+
+	leveed_areas = models.FilePathField(null=True, blank=True, editable=False)
 
 	def make(self, name, short_name, dem=None, slope=None, nlcd=None, census_places=None, protected_areas=None,
 			 floodplain_areas=None, tiger_lines=None, parcels=None, layers=None, base_directory=None, crs_string=None):
@@ -175,6 +181,32 @@ class Region(models.Model):
 		if do_all:
 			self.process_derived()
 
+	def check_extent(self):
+		if not self.extent_polygon:
+			if not self.dem:
+				raise ValueError("Need a DEM before extent can be fixed")
+
+			self.extent_polygon = generate_gdb_filename("extent_polygon", gdb=self.derived_layers)
+			conversion.make_extent_from_dem(self.dem, self.extent_polygon)
+
+			self.save()
+
+	def _fix_parcels(self, side_length=142):
+		"""
+			Called when parcels layer isn't defined - generates a hexagonal mesh coveriung the region, based on the region's extent_polygon property
+			default side length value comes from monroe parcels - average parcel area is 53k m2. side length of hexagon with that area is 142
+		:return:
+		"""
+
+		self.parcels = generate_gdb_filename("hexagon_parcels", gdb=self.derived_layers)
+
+		parcels.make_hexagon_tessellation(study_area=self.extent_polygon, side_length=side_length, output_location=self.parcels)
+		self.save()
+
+	def check_parcels(self):
+		if self.parcels is None or self.parcels == "":
+			self._fix_parcels()
+
 	def process_derived(self):
 		"""
 			Processes any necessary derived layers that should be precomputed based on input layers
@@ -189,31 +221,32 @@ class Region(models.Model):
 			self.save()
 
 		self.compute_floodplain_distance()
-
 		self.save()
 
 	def compute_floodplain_distance(self, cell_size=30):
 
 		arcpy.CheckOutExtension("Spatial")
 		stored_environments = gis.store_environments(["mask", "extent"])  # back up the existing settings for environment variables
-		arcpy.env.mask = self.dem  # set the analysis to only occur as large as the parcels layer
-		arcpy.env.extent = self.dem
+		try:
+			arcpy.env.mask = self.dem  # set the analysis to only occur as large as the parcels layer
+			arcpy.env.extent = self.dem
 
-		geoprocessing_log.info("Computing Floodplain Distance")
+			geoprocessing_log.info("Computing Floodplain Distance")
 
-		distance_raster = generate_gdb_filename("floodplain_distance_raster", gdb=self.derived_layers)
+			distance_raster = generate_gdb_filename("floodplain_distance_raster", gdb=self.derived_layers)
 
-		if RUN_GEOPROCESSING:
-			distance_raster_unsaved = arcpy.sa.EucDistance(self.floodplain_areas, cell_size=cell_size)
-			distance_raster_unsaved.save(distance_raster)
-		else:
-			geoprocessing_log.warning("Skipping Geoprocessing for floodplain distance because RUN_GEOPROCESSING is False")
+			if RUN_GEOPROCESSING:
+				distance_raster_unsaved = arcpy.sa.EucDistance(self.floodplain_areas, cell_size=cell_size)
+				distance_raster_unsaved.save(distance_raster)
+			else:
+				geoprocessing_log.warning("Skipping Geoprocessing for floodplain distance because RUN_GEOPROCESSING is False")
 
-		gis.reset_environments(stored_environments=stored_environments)  # restore the environment variable settings to original values
-		arcpy.CheckInExtension("Spatial")
+			self.floodplain_distance = distance_raster
+			self.save()
 
-		self.floodplain_distance = distance_raster
-		self.save()
+		finally:
+			gis.reset_environments(stored_environments=stored_environments)  # restore the environment variable settings to original values
+			arcpy.CheckInExtension("Spatial")
 
 	def clean_working(self):
 		pass
@@ -452,6 +485,14 @@ class LocationInformation(PolygonStatistics):
 
 
 class PolygonData(models.Model):
+	"""
+		This object is created to represent a polygon in the django db -
+		I'm wishing I'd written this docstring sooner - I can't remember why we're using this class instead of reading
+		directly from the features and outputting that (aka, there's already a class for this! it's an ArcGIS row).
+
+		We need this class because we need to read in the features and make the output relative to the input. So, when we write out the CSV,
+		we need to make the results relative to the original location
+	"""
 
 	feature_class = models.ForeignKey(LocationInformation, related_name="features")
 
@@ -559,6 +600,22 @@ class Analysis(models.Model):
 	def __unicode__(self):
 		return six.u(self.name)
 
+	def _extract_parcels(self, location, original_parcels):
+		"""
+			Takes huge parcel layers and extracts just what the current location needs
+		"""
+
+		feature_layer = "parcels_layer"
+		arcpy.MakeFeatureLayer_management(original_parcels, feature_layer)  # make a feature layer to use in the selection tool
+		arcpy.SelectLayerByLocation_management(feature_layer, "INTERSECT", location.search_area)  # select the features to keep - those that intersect the location
+
+		output_name = generate_gdb_filename(name_base="parcels", gdb=self.workspace)  # make a new layer for it
+		arcpy.CopyFeatures_management(feature_layer, output_name)  # write them out
+
+		arcpy.Delete_management(feature_layer)  # get rid of the feature layer
+
+		return output_name
+
 
 class SuitabilityAnalysis(Analysis):
 
@@ -579,10 +636,13 @@ class SuitabilityAnalysis(Analysis):
 			self.parcels
 		except Parcels.DoesNotExist:
 			l_parcels = Parcels()  # pass in the parcels layer for setup
-			l_parcels.original_layer = self.location.region.parcels
+			l_parcels.original_layer = self.extract_parcels(self.location.region.parcels)  # extracts the parcels for this location, then passes them into the parcels object for processing
 			l_parcels.save()
 			self.parcels = l_parcels
 			self.save()
+
+	def extract_parcels(self, parcels):
+		self._extract_parcels(self.location, parcels)
 
 	def merge(self):
 		self.potential_suitable_areas = merge.merge_constraints(self.location.search_area, self.constraints.all(), self.workspace)
@@ -819,6 +879,9 @@ class RelocatedTown(Analysis):
 		self._make_location(before_poly, region)
 		self._make_location(after_poly, region)
 		self.save()
+
+	def extract_parcels(self, parcels):
+		self._extract_parcels(self.before_location, parcels)
 
 	def _make_boundary(self, features, buffer_distance, k=15):
 		"""
