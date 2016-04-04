@@ -180,13 +180,13 @@ def createHull(pDict, outCaseField, lastValue, kStart, dictCount, includeNull, s
 
 	# Insert the Polygons
 	if (notNullGeometry and includeNull == False) or includeNull:
-		if outCaseField > " ":
+		if outCaseField is not None:
 			insFields = [outCaseField, "POINT_CNT", "ENCLOSED", "SHAPE@"]
 		else:
 			insFields = ["POINT_CNT", "ENCLOSED", "SHAPE@"]
 		rows = arcpy.da.InsertCursor(outFC, insFields)
 		row = []
-		if outCaseField > " ":
+		if outCaseField is not None:
 			row.append(lastValue)
 		row.append(dictCount)
 		if notNullGeometry:
@@ -198,7 +198,7 @@ def createHull(pDict, outCaseField, lastValue, kStart, dictCount, includeNull, s
 		rows.insertRow(row)
 		del row
 		del rows
-	elif outCaseField > " ":
+	elif outCaseField is not None:
 		arcpy.AddMessage("\nExcluded Null Geometry for case value " + str(lastValue) + "!")
 	else:
 		arcpy.AddMessage("\nExcluded Null Geometry!")
@@ -218,7 +218,7 @@ def concave_hull(in_points, k, out_fc, case_field=None):
 	out_name = os.path.basename(out_fc)
 
 	# Get case field and ensure it is valid
-	if case_field > " ":
+	if case_field is not None:
 		fields = in_desc.fields
 		for field in fields:
 			# Check the case field type
@@ -267,7 +267,7 @@ def concave_hull(in_points, k, out_fc, case_field=None):
 	# Create the output
 	arcpy.AddMessage("\nCreating Feature Class...")
 	out_fc = arcpy.CreateFeatureclass_management(out_path, out_name, "POLYGON", "#", "#", "#", spatial_reference).getOutput(0)
-	if case_field > " ":
+	if case_field is not None:
 		if case_field_type in ["SmallInteger", "Integer", "Single", "Double"]:
 			arcpy.AddField_management(out_fc, out_case_field, case_field_type, str(case_field_scale), str(case_field_precision))
 		elif case_field_type == "String":
@@ -283,7 +283,7 @@ def concave_hull(in_points, k, out_fc, case_field=None):
 	caseCount = 0
 	dictCount = 0
 	pDict = {}  # dictionary keyed on oid with [X,Y] list values, no duplicate points
-	if case_field > " ":
+	if case_field is not None:
 		fields = [case_field, 'OID@', 'SHAPE@X', 'SHAPE@Y']
 		valueDict = {}
 		with arcpy.da.SearchCursor(in_points, fields) as searchRows:
@@ -315,10 +315,12 @@ def concave_hull(in_points, k, out_fc, case_field=None):
 				pDict[p[0]] = [p[1], p[2]]
 				dictCount += 1
 				lastValue = 0
+		else:
+			lastValue = 0
 		# Final create hull call and wrap up of the program's massaging
 		createHull(pDict, out_case_field, lastValue, k_start, dictCount, include_null, spatial_reference, out_fc)
 	arcpy.AddMessage("\n" + str(rowCount) + " points processed.  " + str(caseCount) + " case value(s) processed.")
-	if case_field == " " and arcpy.GetParameterAsText(3) > " ":
+	if case_field == " " and arcpy.GetParameterAsText(3) is not None:
 		arcpy.AddMessage(
 			"\nThe Case Field named " + arcpy.GetParameterAsText(3) + " was not a valid field type and was ignored!")
 	arcpy.AddMessage("\nFinished")

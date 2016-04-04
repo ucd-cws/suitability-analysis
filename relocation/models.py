@@ -178,6 +178,9 @@ class Region(models.Model):
 		if process_paths_from_name:
 			self._base_setup()
 
+		self.check_extent()
+		self.check_parcels()
+
 		if do_all:
 			self.process_derived()
 
@@ -226,14 +229,22 @@ class Region(models.Model):
 	def compute_floodplain_distance(self, cell_size=30):
 
 		arcpy.CheckOutExtension("Spatial")
-		stored_environments = gis.store_environments(["mask", "extent"])  # back up the existing settings for environment variables
+		stored_environments = gis.store_environments(["mask", "extent", "outputCoordinateSystem"])  # back up the existing settings for environment variables
 		try:
-			arcpy.env.mask = self.dem  # set the analysis to only occur as large as the parcels layer
-			arcpy.env.extent = self.dem
+			if self.extent_polygon is None:
+				raise ValueError("DEM is not defined - can't make floodplain distance because distance will be huge")
+
+			print(self.extent_polygon)  # TEMP!
+			arcpy.env.mask = self.extent_polygon  # set the analysis to only occur as large as the parcels layer
+			arcpy.env.extent = self.extent_polygon
+
+			dem_spatial_reference = arcpy.Describe(self.dem).spatialReference
+			arcpy.env.outputCoordinateSystem = dem_spatial_reference  # doing this because after the extent polygon used the outputCoordinateSystem environment, this started having troubles with spatial references - let's make it explicit
 
 			geoprocessing_log.info("Computing Floodplain Distance")
 
 			distance_raster = generate_gdb_filename("floodplain_distance_raster", gdb=self.derived_layers)
+			print(distance_raster)
 
 			if RUN_GEOPROCESSING:
 				distance_raster_unsaved = arcpy.sa.EucDistance(self.floodplain_areas, cell_size=cell_size)
@@ -398,8 +409,8 @@ class PolygonStatistics(models.Model):
 	def compute_slope_and_elevation(self):
 
 		analysis = self.get_analysis_object()
-		self.zonal_min_max_mean(analysis.location.region.dem, "elevation")
-		self.zonal_min_max_mean(analysis.location.region.slope, "slope")
+		self.zonal_min_max_mean(analysis.region.dem, "elevation")
+		self.zonal_min_max_mean(analysis.region.slope, "slope")
 
 	def compute_centroid_elevation(self):
 
@@ -411,7 +422,7 @@ class PolygonStatistics(models.Model):
 		processing_log.info("Computing Centroid Elevation")
 		centroids = geometry.get_centroids(self.layer, as_file=True, id_field=self.id_field)
 		elevation_points = generate_gdb_filename("elevation_points", scratch=True)
-		arcpy.sa.ExtractValuesToPoints(centroids, analysis.location.region.dem, elevation_points)
+		arcpy.sa.ExtractValuesToPoints(centroids, analysis.region.dem, elevation_points)
 
 		try:
 			processing_log.info("Permanent Join")
@@ -448,7 +459,7 @@ class PolygonStatistics(models.Model):
 
 		processing_log.info("Getting Distance To Floodplain")
 
-		self.zonal_min_max_mean(analysis.location.region.floodplain_distance, "distance_to_floodplain")
+		self.zonal_min_max_mean(analysis.region.floodplain_distance, "distance_to_floodplain")
 
 	def as_geojson(self):
 		geodatabase, layer_name = os.path.split(self.layer)
@@ -473,7 +484,14 @@ class Parcels(PolygonStatistics):
 	static_folder = "parcels"
 
 	def get_analysis_object(self):
-		return self.suitability_analysis
+		return self.analysis
+
+
+class RelocationParcels(PolygonStatistics):
+	static_folder = "parcels"
+
+	def get_analysis_object(self):
+		return self.relocation_analysis
 
 
 class LocationInformation(PolygonStatistics):
@@ -487,8 +505,6 @@ class LocationInformation(PolygonStatistics):
 class PolygonData(models.Model):
 	"""
 		This object is created to represent a polygon in the django db -
-		I'm wishing I'd written this docstring sooner - I can't remember why we're using this class instead of reading
-		directly from the features and outputting that (aka, there's already a class for this! it's an ArcGIS row).
 
 		We need this class because we need to read in the features and make the output relative to the input. So, when we write out the CSV,
 		we need to make the results relative to the original location
@@ -520,9 +536,9 @@ class Location(models.Model):
 	region = models.ForeignKey(Region, null=False)
 
 	working_directory = models.FilePathField(path=LOCATIONS_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
-	layers = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False)
+	layers = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 
-	boundary_polygon_name = models.CharField(max_length=255)
+	boundary_polygon_name = models.CharField(max_length=255, null=True, blank=True)
 	boundary_polygon = models.FilePathField(null=True, blank=True, recursive=True, max_length=255, allow_folders=True, allow_files=False, editable=False)
 
 	spatial_data = models.OneToOneField(LocationInformation, related_name="location")
@@ -541,7 +557,6 @@ class Location(models.Model):
 			spatial_data = LocationInformation()
 			spatial_data.save()
 			self.spatial_data = spatial_data
-			self.save()
 
 	def setup(self):
 		"""
@@ -574,7 +589,6 @@ class Location(models.Model):
 	def __unicode__(self):
 		return six.u(self.name)
 
-
 class Analysis(models.Model):
 
 	name = models.CharField(max_length=255, blank=False, null=False)
@@ -583,12 +597,29 @@ class Analysis(models.Model):
 	working_directory = models.FilePathField(path=GEOSPATIAL_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 
+	region = models.ForeignKey(Region, related_name="analysis")
+
+	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
+	parcels = models.OneToOneField(Parcels, related_name="analysis")
+
 	class Meta:
 		abstract = True
 
+	def setup(self, force_create=False):
+		self.setup_working_dirs(force_create=force_create)
+
+		try:
+			self.parcels
+		except Parcels.DoesNotExist:
+			l_parcels = Parcels()  # pass in the parcels layer for setup
+			l_parcels.original_layer = self._extract_parcels(self.region.parcels)  # extracts the parcels for this location, then passes them into the parcels object for processing
+			l_parcels.save()
+			self.parcels = l_parcels
+			self.save()
+
 	def setup_working_dirs(self, force_create=False):
 		if not self.working_directory or not os.path.exists(self.working_directory) or force_create:
-			self.working_directory = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.location.region.short_name)
+			self.working_directory = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.region.short_name)
 
 		self.workspace = os.path.join(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
 		if not self.workspace or not os.path.exists(self.workspace) or force_create:
@@ -600,14 +631,14 @@ class Analysis(models.Model):
 	def __unicode__(self):
 		return six.u(self.name)
 
-	def _extract_parcels(self, location, original_parcels):
+	def _extract_parcels(self, original_parcels):
 		"""
-			Takes huge parcel layers and extracts just what the current location needs
+			Takes huge parcel layers and extracts just what the current location needs for this region
 		"""
 
 		feature_layer = "parcels_layer"
 		arcpy.MakeFeatureLayer_management(original_parcels, feature_layer)  # make a feature layer to use in the selection tool
-		arcpy.SelectLayerByLocation_management(feature_layer, "INTERSECT", location.search_area)  # select the features to keep - those that intersect the location
+		arcpy.SelectLayerByLocation_management(feature_layer, "INTERSECT", self.region.extent_polygon)  # select the features to keep - those that intersect the location
 
 		output_name = generate_gdb_filename(name_base="parcels", gdb=self.workspace)  # make a new layer for it
 		arcpy.CopyFeatures_management(feature_layer, output_name)  # write them out
@@ -625,25 +656,6 @@ class SuitabilityAnalysis(Analysis):
 
 	location = models.OneToOneField(Location, related_name="suitability_analysis")
 
-	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
-	parcels = models.OneToOneField(Parcels, related_name="suitability_analysis")
-
-	def setup(self, force_create=False):
-
-		self.setup_working_dirs(force_create=force_create)
-
-		try:
-			self.parcels
-		except Parcels.DoesNotExist:
-			l_parcels = Parcels()  # pass in the parcels layer for setup
-			l_parcels.original_layer = self.extract_parcels(self.location.region.parcels)  # extracts the parcels for this location, then passes them into the parcels object for processing
-			l_parcels.save()
-			self.parcels = l_parcels
-			self.save()
-
-	def extract_parcels(self, parcels):
-		self._extract_parcels(self.location, parcels)
-
 	def merge(self):
 		self.potential_suitable_areas = merge.merge_constraints(self.location.search_area, self.constraints.all(), self.workspace)
 		self.split_potential_areas = self.split()
@@ -659,7 +671,7 @@ class SuitabilityAnalysis(Analysis):
 		:return: path to feature class of the new mesh, in the location gdb
 		"""
 
-		return self.location.region.parcels
+		return self.region.parcels
 
 	def split(self):
 		"""
@@ -671,8 +683,8 @@ class SuitabilityAnalysis(Analysis):
 			processing_log.error("potential_suitable_areas is not defined - the split method can only be called after a merge has initiated, generated, and saved the potential suitable areas")
 			raise ValueError("potential_suitable_areas is not defined - the split method can only be called after a merge has initiated, generated, and saved the potential suitable areas")
 
-		if self.location.region.parcels:
-			mesh = self.location.region.parcels
+		if self.region.parcels:
+			mesh = self.region.parcels
 		else:
 			mesh = self.generate_mesh()
 
@@ -681,6 +693,169 @@ class SuitabilityAnalysis(Analysis):
 		arcpy.Intersect_analysis(in_features=[self.potential_suitable_areas, self.mesh], out_feature_class=split_areas)
 
 		return split_areas
+
+
+class RelocationStatistics(Location):
+	# TODO: these attributes might get moved up to PolygonStatistics at some point along with a function to extract them from the layer
+	centroid_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	centroid_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	min_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	max_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	mean_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	min_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	max_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	mean_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	min_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	max_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	mean_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	active = models.BooleanField(default=False)  # flag to indicate whether it can be used in an analysis
+
+	static_folder = "relocation_towns"
+
+	def get_analysis_object(self):
+		return self.town
+
+	def _validate(self):
+		"""
+			This function exists because when entering a town, we might want to allow some attributes to be missing,
+			but as of this writing a town needs to have all attributes in order to be usable.
+		:return:
+		"""
+		for attr in self._meta.get_all_field_names():
+			if getattr(self, attr) is None or getattr(self, attr) == "":  # if it's blank or null
+				raise ValueError("Field {0:s} is null or empty in Relocation Town {0:s} (id {0:d}). Must be resolved before this town can be used in the model".format(attr, self.name, self.id))
+
+	def prepare(self):
+		"""
+			Checks all the fields and ensures they are ready to be used. If not, deactivates the town
+		:return:
+		"""
+		try:
+			self._validate()
+			self.active = True
+		except ValueError:
+			processing_log.warning("Not using Relocation Town {0:s} due to missing attributes. Please fill in all attributes to proceed")
+			self.active = False
+			if DEBUG:
+				six.reraise(*sys.exc_info())
+
+		self.save()
+
+
+class RelocatedTown(Analysis):
+	"""
+		A class for towns that have already successfully moved that helps us store attributes for
+
+		It's important that key attributes on this model remain the same as key attributes on the suitability analysis because
+		we're going to reference this model *as* the suitability analysis from polygon statistics. So it should behave a bit like one.
+		It could be worth finding some core set of functionality to subclass the two from.
+	"""
+
+	year_relocated = models.IntegerField(null=True, blank=True)
+	before_structures = models.FilePathField(null=True, blank=True)
+	moved_structures = models.FilePathField(null=True, blank=True)
+	before_location = models.OneToOneField(RelocationStatistics, related_name="town_before")
+	moved_location = models.OneToOneField(RelocationStatistics, related_name="town_moved")
+
+	# snapshots = relation to RelocationStatistics objects
+
+	def relocation_setup(self, name, before, after, region, make_boundaries_from_structures=False, buffer_distance=100):
+		"""
+			Creates the sub-location objects and attaches them here
+		:param name: Name of the city - locations will be based on this
+		:param before:
+		:param after_poly:
+		:param region: Region object that this town/region will be attached to.
+		:return:
+		"""
+
+		self.name = name
+		self.region = region
+		self.setup()
+
+		if make_boundaries_from_structures:
+			before_poly = self._make_boundary(before, buffer_distance)
+			after_poly = self._make_boundary(after, buffer_distance)
+		else:
+			before_poly = before
+			after_poly = after
+
+		self._make_location(before_poly, "before")
+		self._make_location(after_poly, "after")
+
+		self.save()
+
+	def extract_parcels(self, parcels):
+		"""
+			Probably defunct! This functionality of copying over the parcels is handed in the main analysis setup
+		"""
+		self.parcels_layer = self._extract_parcels(self.before_location, parcels)
+		self.parcels = RelocationParcels()
+		self.parcels.original_layer = self.parcels_layer
+		self.parcels.setup()
+
+	def _make_boundary(self, features, buffer_distance, k=15):
+		"""
+			generates the boundary for an individual set of structures using a buffered convex hull.
+		:param features:
+		:param buffer_distance:
+		:param k: saving parameter - was used for concave hulls, but now using a convex hull instead
+		:return:
+		"""
+
+		new_layer = generate_gdb_filename(gdb="in_memory", scratch=True)
+		try:
+			try:
+				arcpy.MinimumBoundingGeometry_management(features, new_layer, geometry_type="CONVEX_HULL")
+			except:
+				geoprocessing_log.error("Failed to generate polygon boundary for town {0:s} (concave_hull)".format(self.name))
+				if DEBUG:
+					six.reraise(*sys.exc_info())
+
+			final_layer = generate_gdb_filename("{0:s}_boundary".format(self.name), gdb=self.workspace,)
+			arcpy.Buffer_analysis(new_layer, final_layer, buffer_distance)
+		finally:  # clean up layers
+			try:
+				arcpy.Delete_management(new_layer)
+			except:  # doesn't matter if it fails, just log it
+				geoprocessing_log.warn("failed to clean up in_memory workspace and delete concave hull generated boundary")
+
+		return final_layer
+
+	def _make_location(self, polygon, before_after="before"):
+		location = RelocationStatistics()
+		location.name = self.name
+		location.short_name = self.name
+		location.boundary_polygon = polygon
+		location.region = self.region
+		location.save()
+		if before_after == "before":
+			self.before_location = location
+		elif before_after == "after":
+			self.moved_location = location
+		location.save()  # this line is because I don't fully understand what's going on - I need to save the object before making the relationship, but I think I need to save it afterward as well.
+
+	# TODO: This method needs to be refactored based on the changes to this object and its relationships
+	def load_from_dict(self, dictionary, raise_errors=False):
+		"""
+			Given a dictionary (such as a row from a dictreader), this sets the values on this object to match the named fields in the dict
+		:param dictionary:
+		:return:
+		"""
+		for attr in self._meta.get_all_field_names():
+			try:
+				setattr(self, attr, dictionary[attr])
+			except KeyError:  # if the dictionary doesn't have this attribute
+				processing_log.warning("Couldn't get attribute {0:s} from dictionary - make sure fields in the spreadsheet are named appropriately and values are defined")
+				if raise_errors or DEBUG:
+					six.reraise(*sys.exc_info())
+
+	def __str__(self):
+		return six.u("Relocated Town: {0:s}".format(self.name))
+
+	def __unicode__(self):
+		return six.u("Relocated Town: {0:s}".format(self.name))
+
 
 class Constraint(InheritanceCastModel):
 	"""
@@ -838,159 +1013,4 @@ class ScoredConstraint(Constraint):
 		# See http://gis.stackexchange.com/questions/50169/how-to-standardize-raster-output-from-0-to-100-using-raster-algebra
 
 		pass
-
-
-class RelocatedTown(Analysis):
-	"""
-		A class for towns that have already successfully moved that helps us store attributes for
-
-		It's important that key attributes on this model remain the same as key attributes on the suitability analysis because
-		we're going to reference this model *as* the suitability analysis from polygon statistics. So it should behave a bit like one.
-		It could be worth finding some core set of functionality to subclass the two from.
-	"""
-
-	year_relocated = models.IntegerField(null=True, blank=True)
-	before_structures = models.FilePathField(null=True, blank=True)
-	after_structures = models.FilePathField(null=True, blank=True)
-	before_location = models.OneToOneField(Location, related_name="relocated_town_before")
-	moved_location = models.OneToOneField(Location, related_name="relocated_town_after")
-
-	# snapshots = relation to RelocationStatistics objects
-
-	def setup(self, name, before, after, region, make_boundaries_from_structures=False, buffer_distance=100):
-		"""
-			Creates the sub-location objects and attaches them here
-		:param name: Name of the city - locations will be based on this
-		:param before_poly:
-		:param after_poly:
-		:param region: Region object that this town/region will be attached to.
-		:return:
-		"""
-
-		self.name = name
-
-		if make_boundaries_from_structures:
-			before_poly = self.before_location.boundary_polygon = self._make_boundary(self.before_structures, buffer_distance)
-			after_poly = self.after_location.boundary_polygon = self._make_boundary(self.before_structures, buffer_distance)
-		else:
-			before_poly = before
-			after_poly = after
-
-		self._make_location(before_poly, region)
-		self._make_location(after_poly, region)
-		self.save()
-
-	def extract_parcels(self, parcels):
-		self._extract_parcels(self.before_location, parcels)
-
-	def _make_boundary(self, features, buffer_distance, k=15):
-		"""
-			generates the boundary for an individual set of structures
-		:param features:
-		:param buffer_distance:
-		:param k:
-		:return:
-		"""
-		new_layer = generate_gdb_filename(gdb="in_memory", scratch=True)
-		try:
-			try:
-				concave_hull.concave_hull(features, k=k, out_fc=new_layer)
-			except:
-				geoprocessing_log.error("Failed to generate polygon boundary for town {0:s} (concave_hull)".format(self.name))
-				if DEBUG:
-					six.reraise(*sys.exc_info())
-
-			final_layer = generate_gdb_filename("{0:s}_boundary", gdb=self.workspace,)
-			arcpy.Buffer_analysis(new_layer, final_layer, buffer_distance)
-		finally:  # clean up layers
-			try:
-				arcpy.Delete_management(new_layer)
-			except:  # doesn't matter if it fails, just log it
-				geoprocessing_log.warn("failed to clean up in_memory workspace and delete concave hull generated boundary")
-
-		return final_layer
-
-	def _make_location(self, polygon, region):
-		location = Location()
-		location.initial()
-		location.boundary_polygon = polygon
-		location.region = region
-		location.name = self.name
-		location.short_name = self.name.replace(" ", "-")  # TODO: See if there's a better django way to sanitize all URL character (',etc)
-		location.setup()
-		location.save()
-		self.before_location = location
-
-	# TODO: This method needs to be refactored based on the changes to this object and its relationships
-	def load_from_dict(self, dictionary, raise_errors=False):
-		"""
-			Given a dictionary (such as a row from a dictreader), this sets the values on this object to match the named fields in the dict
-		:param dictionary:
-		:return:
-		"""
-		for attr in self._meta.get_all_field_names():
-			try:
-				setattr(self, attr, dictionary[attr])
-			except KeyError:  # if the dictionary doesn't have this attribute
-				processing_log.warning("Couldn't get attribute {0:s} from dictionary - make sure fields in the spreadsheet are named appropriately and values are defined")
-				if raise_errors or DEBUG:
-					six.reraise(*sys.exc_info())
-
-	def __str__(self):
-		return six.u("Relocated Town: {0:s}".format(self.name))
-
-	def __unicode__(self):
-		return six.u("Relocated Town: {0:s}".format(self.name))
-
-
-class RelocationStatistics(PolygonStatistics):
-	year = models.IntegerField(null=True, blank=True)
-	boundary_polygon = models.FilePathField(allow_files=True, allow_folders=False)  # TODO: Might not be necessary through location connection
-
-	# TODO: these attributes might get moved up to PolygonStatistics at some point along with a function to extract them from the layer
-	centroid_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	centroid_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	min_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	max_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	mean_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	min_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	max_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	mean_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	min_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	max_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	mean_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	active = models.BooleanField(default=False)  # flag to indicate whether it can be used in an analysis
-
-	static_folder = "relocation_towns"
-
-	town = models.ForeignKey(RelocatedTown, related_name="snapshots")
-
-	def get_analysis_object(self):
-		return self.town
-
-	def _validate(self):
-		"""
-			This function exists because when entering a town, we might want to allow some attributes to be missing,
-			but as of this writing a town needs to have all attributes in order to be usable.
-		:return:
-		"""
-		for attr in self._meta.get_all_field_names():
-			if getattr(self, attr) is None or getattr(self, attr) == "":  # if it's blank or null
-				raise ValueError("Field {0:s} is null or empty in Relocation Town {0:s} (id {0:d}). Must be resolved before this town can be used in the model".format(attr, self.name, self.id))
-
-	def prepare(self):
-		"""
-			Checks all the fields and ensures they are ready to be used. If not, deactivates the town
-		:return:
-		"""
-		try:
-			self._validate()
-			self.active = True
-		except ValueError:
-			processing_log.warning("Not using Relocation Town {0:s} due to missing attributes. Please fill in all attributes to proceed")
-			self.active = False
-			if DEBUG:
-				six.reraise(*sys.exc_info())
-
-		self.save()
 

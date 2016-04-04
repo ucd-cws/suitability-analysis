@@ -12,26 +12,30 @@ from relocation.gis import store_environments, reset_environments
 
 def make_extent_from_dem(dem, output_location):
 	arcpy.CheckOutExtension("Spatial")
-	environements = store_environments(["mask", "extent"])
+	environments = store_environments(["mask", "extent", "outputCoordinateSystem"])
 
 	try:
 		temp_raster_filename = generate_gdb_filename(scratch=True)
+
+		dem_properties = arcpy.Describe(dem)
+		arcpy.env.outputCoordinateSystem = dem_properties.spatialReference  # set the spatial reference environment variable so that the constant raster gets created properly
 
 		geoprocessing_log.info("Creating Constant Raster")
 		arcpy.env.mask = dem
 		raster = arcpy.sa.CreateConstantRaster(constant_value=1, data_type="INTEGER", cell_size=10, extent=dem)
 
 		geoprocessing_log.info("Saving to output filename")
+		print(temp_raster_filename)
 		raster.save(temp_raster_filename)
 
 		geoprocessing_log.info("Converting Raster to Polygon")
 		arcpy.RasterToPolygon_conversion(temp_raster_filename, output_location, simplify=False, raster_field="Value")
 
-		arcpy.Delete_management(temp_raster_filename)
+		#arcpy.Delete_management(temp_raster_filename)
 
 	finally:
 		arcpy.CheckInExtension("Spatial")
-		reset_environments(environements)
+		reset_environments(environments)
 
 
 def convert_to_temp_csv(features):
