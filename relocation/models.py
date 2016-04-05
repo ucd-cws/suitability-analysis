@@ -11,10 +11,11 @@ import logging
 import os
 import shutil
 import traceback
+from itertools import chain
 
 # Get an instance of a logger
 processing_log = logging.getLogger("processing_log")
-geoprocessing_log = logging.getLogger("geoprocessing")
+geoprocessing_log = logging.getLogger("geoprocessing_log")
 
 import arcpy
 
@@ -61,6 +62,19 @@ LAND_COVER_CHOICES = (
 	(90, "90 - Woody Wetlands"),
 	(95, "95 - Emergent Herbaceous Wetlands ")
 )
+
+
+def get_field_names(read_object):
+	"""
+		replacement for _meta.get_all_field_names() from https://docs.djangoproject.com/en/1.9/ref/models/meta/
+	"""
+	return list(set(chain.from_iterable(
+		(field.name, field.attname) if hasattr(field, 'attname') else (field.name,)
+		for field in read_object._meta.get_fields()
+		# For complete backwards compatibility, you may want to exclude
+		# GenericForeignKey from the results.
+		if not (field.many_to_one and field.related_model is None)
+	)))
 
 
 class InheritanceCastModel(models.Model):
@@ -141,6 +155,7 @@ class Region(models.Model):
 		self.base_directory = base_directory
 
 		self.dem = dem
+		processing_log.info("DEM is {0:s}".format(self.dem))
 		self.slope = slope
 		self.nlcd = nlcd
 		self.census_places = census_places
@@ -187,7 +202,7 @@ class Region(models.Model):
 	def check_extent(self):
 		if not self.extent_polygon:
 			if not self.dem:
-				raise ValueError("Need a DEM before extent can be fixed")
+				raise ValueError("Need a DEM before extent can be fixed. DEM Value is: [{0:s}]".format(self.dem))
 
 			self.extent_polygon = generate_gdb_filename("extent_polygon", gdb=self.derived_layers)
 			conversion.make_extent_from_dem(self.dem, self.extent_polygon)
@@ -234,7 +249,7 @@ class Region(models.Model):
 			if self.extent_polygon is None:
 				raise ValueError("DEM is not defined - can't make floodplain distance because distance will be huge")
 
-			print(self.extent_polygon)  # TEMP!
+			processing_log.debug("Extent Polygon: {0:s}".format(self.extent_polygon))
 			arcpy.env.mask = self.extent_polygon  # set the analysis to only occur as large as the parcels layer
 			arcpy.env.extent = self.extent_polygon
 
@@ -244,9 +259,10 @@ class Region(models.Model):
 			geoprocessing_log.info("Computing Floodplain Distance")
 
 			distance_raster = generate_gdb_filename("floodplain_distance_raster", gdb=self.derived_layers)
-			print(distance_raster)
+			processing_log.debug("Distance raster: {0:s}".format(distance_raster))
 
 			if RUN_GEOPROCESSING:
+				processing_log.info(self.floodplain_areas)
 				distance_raster_unsaved = arcpy.sa.EucDistance(self.floodplain_areas, cell_size=cell_size)
 				distance_raster_unsaved.save(distance_raster)
 			else:
@@ -354,14 +370,18 @@ class PolygonStatistics(models.Model):
 		self.layer = new_path
 		self.save()
 
-	def get_join_field(self):
+	def get_join_field(self, zonal_table):
 		"""
 			A special case occurs if the id_field is OBJECTID because ArcGIS renames the field to OBJECTID_1
 			This function provides that as a join field when applicable, and returns the original field otherwise
 		:return:
 		"""
-		if self.id_field == "OBJECTID":
-			return "OBJECTID_1"
+
+		fields = arcpy.ListFields(zonal_table)
+
+		for field in fields:
+			if field.name == "OBJECTID_1":  # if it has an OBJECTID_1 field, return that - it might when it has OBJECTID as its key
+				return "OBJECTID_1"
 		else:
 			return self.id_field
 
@@ -377,16 +397,26 @@ class PolygonStatistics(models.Model):
 
 		arcpy.CheckOutExtension("Spatial")
 
+		analysis = self.get_analysis_object()
+
 		geoprocessing_log.info("Running Zonal Statistics for {0:s}".format(name))
-		zonal_table = generate_gdb_filename(name_base="zonal_table", scratch=True)
+		zonal_table = generate_gdb_filename(name_base="zonal_table", gdb=analysis.workspace, scratch=False)
+		processing_log.debug("Zonal Table is: {0:s}".format(zonal_table))
+		processing_log.debug("Features are: {0:s}".format(self.layer))
 		arcpy.sa.ZonalStatisticsAsTable(self.layer, self.id_field, raster, zonal_table, statistics_type="MIN_MAX_MEAN")
 
-		join_field = self.get_join_field()
+		join_field = self.get_join_field(zonal_table)
 		try:
 			geoprocessing_log.info("Joining {0:s} Zone Statistics to Parcels".format(name))
 			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MEAN", rename_attribute="stat_mean_{0:s}".format(name))
+
+			geoprocessing_log.debug("Joining min")
 			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MIN", rename_attribute="stat_min_{0:s}".format(name))
+
+			geoprocessing_log.debug("Joining_max")
 			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MAX", rename_attribute="stat_max_{0:s}".format(name))
+
+			geoprocessing_log.info("Done with joining data")
 		except:
 			if not DEBUG:
 				geoprocessing_log.error("Unable to join zonal {0:s} back to parcels".format(name))
@@ -394,6 +424,13 @@ class PolygonStatistics(models.Model):
 				six.reraise(*sys.exc_info())
 
 		arcpy.CheckInExtension("Spatial")
+
+	def rescale(self, field, offset_value):
+		"""
+			Runs calculate field on the given statistic field in order to rescale the values to be relative to another value. offset value is subtracted from the existing value
+		"""
+
+		arcpy.CalculateField_management(self.layer, field, expression="!{0:s}! - {1:s}".format(field, offset_value), expression_type="PYTHON_9.3")
 
 	def check_values(self):
 		"""
@@ -440,9 +477,10 @@ class PolygonStatistics(models.Model):
 
 		self.check_values()
 		analysis = self.get_analysis_object()
+		location = analysis.get_location()
 
 		processing_log.info("Centroid Near Distance")
-		distance_information = gis.centroid_near_distance(self.layer, analysis.location.boundary_polygon, self.id_field, analysis.location.search_distance)
+		distance_information = gis.centroid_near_distance(self.layer, location.boundary_polygon, self.id_field, location.search_distance)
 		try:
 			processing_log.info("Permanent Join")
 			gis.permanent_join(self.layer, self.id_field, distance_information["table"], "INPUT_FID", "DISTANCE", new_field_name)  # INPUT_FID and DISTANCE are results of ArcGIS, so it's safe *enough* to hard-code them.
@@ -474,9 +512,17 @@ class PolygonStatistics(models.Model):
 			self.save()
 		except:
 			if DEBUG:
-				six.reraise(*sys.exc_info())
+				geoprocessing_log.error("Unable to convert parcels layer to geojson")
+				# disabling temporarily - working on calibration - this isn't important to me right now!
+				#six.reraise(*sys.exc_info())
 			else:
 				geoprocessing_log.error("Unable to convert parcels layer to geojson")
+
+	def __str__(self):
+		return self.original_layer
+
+	def __unicode__(self):
+		return six.u(self.original_layer)
 
 
 class Parcels(PolygonStatistics):
@@ -484,7 +530,10 @@ class Parcels(PolygonStatistics):
 	static_folder = "parcels"
 
 	def get_analysis_object(self):
-		return self.analysis
+		try:
+			return self.suitabilityanalysis
+		except:
+			return self.relocatedtown
 
 
 class RelocationParcels(PolygonStatistics):
@@ -499,7 +548,14 @@ class LocationInformation(PolygonStatistics):
 	static_folder = "location"
 
 	def get_analysis_object(self):
-		return self.location.suitability_analysis
+		try:
+			return self.location.suitability_analysis
+		except:
+			relocated_statistics = self.location.cast()
+			try:
+				return relocated_statistics.town_before
+			except:
+				return relocated_statistics.town_moved
 
 
 class PolygonData(models.Model):
@@ -515,7 +571,7 @@ class PolygonData(models.Model):
 	objectid = models.IntegerField()
 	name = models.CharField(max_length=100)
 
-	#TODO: Check that these field names match what's being generated on PolygonStatistics
+	# TODO: Check that these field names match what's being generated on PolygonStatistics
 	# fields starting with stat will be dumped to csvs - these will match the field names from the attribute table, so they can be pulled in by a generic function
 	stat_min_elevation = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
 	stat_max_elevation = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
@@ -530,7 +586,7 @@ class PolygonData(models.Model):
 	stat_mean_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
 
 
-class Location(models.Model):
+class Location(InheritanceCastModel):
 	name = models.CharField(max_length=255)
 	short_name = models.SlugField(blank=False, null=False)
 	region = models.ForeignKey(Region, null=False)
@@ -597,10 +653,10 @@ class Analysis(models.Model):
 	working_directory = models.FilePathField(path=GEOSPATIAL_DIRECTORY, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 	workspace = models.FilePathField(path=GEOSPATIAL_DIRECTORY, recursive=True, max_length=255, allow_folders=True, allow_files=False, null=True, blank=True)
 
-	region = models.ForeignKey(Region, related_name="analysis")
+	region = models.ForeignKey(Region, related_name="%(class)s")
 
 	# parcels layer will be copied over from the Region, but then work will proceed on it here so the region remains pure but the location starts modifying it for its own parameters
-	parcels = models.OneToOneField(Parcels, related_name="analysis")
+	parcels = models.OneToOneField(Parcels, related_name="%(class)s")
 
 	class Meta:
 		abstract = True
@@ -611,19 +667,22 @@ class Analysis(models.Model):
 		try:
 			self.parcels
 		except Parcels.DoesNotExist:
+			processing_log.info("Creating Parcels Object")
 			l_parcels = Parcels()  # pass in the parcels layer for setup
 			l_parcels.original_layer = self._extract_parcels(self.region.parcels)  # extracts the parcels for this location, then passes them into the parcels object for processing
-			l_parcels.save()
 			self.parcels = l_parcels
-			self.save()
+			l_parcels.save()
+			self.parcels = l_parcels  # TODO: THis is a really silly hack and seems super wrong. Need to set the value before saving the parcels object so that the relationship constraint is ok for parcels, but need to set it after saving so that the relationship constraint works for the analysis object? Silly
+
 
 	def setup_working_dirs(self, force_create=False):
 		if not self.working_directory or not os.path.exists(self.working_directory) or force_create:
-			self.working_directory = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.region.short_name)
+			self.working_directory, self.workspace = gis.create_working_directories(GEOSPATIAL_DIRECTORY, self.region.short_name)
+		else:
+			self.workspace = os.path.join(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
 
-		self.workspace = os.path.join(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
-		if not self.workspace or not os.path.exists(self.workspace) or force_create:
-			arcpy.CreateFileGDB_management(self.working_directory, "{0:s}_layers.gdb".format(self.short_name))
+		if not self.workspace or not os.path.isdir(self.workspace) or force_create:
+			arcpy.CreateFileGDB_management(os.path.split(self.workspace)[0], os.path.split(self.workspace)[1])
 
 	def __str__(self):
 		return self.name
@@ -665,6 +724,9 @@ class SuitabilityAnalysis(Analysis):
 
 		return self.result
 
+	def get_location(self):
+		return self.location
+
 	def generate_mesh(self):
 		"""
 			TODO: Placeholder function - implement the hexagonal mesh. Need to move on and use the parcels for now)
@@ -697,17 +759,17 @@ class SuitabilityAnalysis(Analysis):
 
 class RelocationStatistics(Location):
 	# TODO: these attributes might get moved up to PolygonStatistics at some point along with a function to extract them from the layer
-	centroid_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	centroid_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	min_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	max_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	mean_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	min_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	max_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	mean_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	min_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	max_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	mean_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_centroid_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_centroid_distance_to_original_boundary = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_min_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_max_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_mean_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_min_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_max_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_mean_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_min_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_max_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_mean_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	active = models.BooleanField(default=False)  # flag to indicate whether it can be used in an analysis
 
 	static_folder = "relocation_towns"
@@ -715,13 +777,31 @@ class RelocationStatistics(Location):
 	def get_analysis_object(self):
 		return self.town
 
+	def read_boundary_info(self):
+		"""
+			Takes the processed data off of the boundary polygon and reads it back in to the attributes
+		"""
+
+		processing_log.debug("Reading data for {0:s} back to object".format(self.name))
+		read_fields = []
+		available_fields = get_field_names(self)
+		for field in available_fields:
+			if field.startswith("stat_"):  # if the field is one of the ones we want to read
+				read_fields.append(field)  # add it to the list of fields to read
+
+		polygon_data = arcpy.SearchCursor(self.boundary_polygon)
+		for record in polygon_data:  # there will only be one
+			for field in read_fields:  # for all the fields we're interested in
+				processing_log.info("Reading {0:s}".format(field))
+				setattr(self, field, record.getValue(field))  # get the value for the field from the spatial data and set the attribute here
+
 	def _validate(self):
 		"""
 			This function exists because when entering a town, we might want to allow some attributes to be missing,
 			but as of this writing a town needs to have all attributes in order to be usable.
 		:return:
 		"""
-		for attr in self._meta.get_all_field_names():
+		for attr in get_field_names(self):
 			if getattr(self, attr) is None or getattr(self, attr) == "":  # if it's blank or null
 				raise ValueError("Field {0:s} is null or empty in Relocation Town {0:s} (id {0:d}). Must be resolved before this town can be used in the model".format(attr, self.name, self.id))
 
@@ -757,9 +837,7 @@ class RelocatedTown(Analysis):
 	before_location = models.OneToOneField(RelocationStatistics, related_name="town_before")
 	moved_location = models.OneToOneField(RelocationStatistics, related_name="town_moved")
 
-	# snapshots = relation to RelocationStatistics objects
-
-	def relocation_setup(self, name, before, after, region, make_boundaries_from_structures=False, buffer_distance=100):
+	def relocation_setup(self, name, short_name, before, after, region, make_boundaries_from_structures=False, buffer_distance=100):
 		"""
 			Creates the sub-location objects and attaches them here
 		:param name: Name of the city - locations will be based on this
@@ -770,6 +848,7 @@ class RelocatedTown(Analysis):
 		"""
 
 		self.name = name
+		self.short_name = short_name
 		self.region = region
 		self.setup()
 
@@ -785,14 +864,28 @@ class RelocatedTown(Analysis):
 
 		self.save()
 
-	def extract_parcels(self, parcels):
-		"""
-			Probably defunct! This functionality of copying over the parcels is handed in the main analysis setup
-		"""
-		self.parcels_layer = self._extract_parcels(self.before_location, parcels)
-		self.parcels = RelocationParcels()
-		self.parcels.original_layer = self.parcels_layer
+		self.setup_location(self.before_location)
+		self.setup_location(self.moved_location)
+
+		self.save()
 		self.parcels.setup()
+
+		self.save()
+
+	def process_for_calibration(self, no_rescale=("stat_centroid_distance",)):
+		"""
+
+			:param no_rescale: indicates which fields should not be rescaled based on the original data
+		"""
+		self.mark_final_parcels()
+
+		for field in get_field_names(self.before_location):
+			if field.startswith("stat_") and field not in no_rescale:  # if it's a statistics field and we're supposed to rescale it
+				processing_log.info("Rescaling field {0:s} with value {1:d}".format(field, getattr(self.before_location, field)))
+				self.parcels.rescale(field, getattr(self.before_location, field))  # get the value for the
+
+	def get_location(self):
+		return self.before_location
 
 	def _make_boundary(self, features, buffer_distance, k=15):
 		"""
@@ -803,6 +896,7 @@ class RelocatedTown(Analysis):
 		:return:
 		"""
 
+		processing_log.info("Making boundary from structures")
 		new_layer = generate_gdb_filename(gdb="in_memory", scratch=True)
 		try:
 			try:
@@ -822,18 +916,59 @@ class RelocatedTown(Analysis):
 
 		return final_layer
 
-	def _make_location(self, polygon, before_after="before"):
+	def mark_final_parcels(self, selection_type="INTERSECT"):
+		"""
+			Takes the parcels layer for the analysis object and adds a field that it uses to mark the parcels as chosen or not chosen
+		"""
+
+		# add field - default of 0
+		parcels = self.parcels.layer
+		field_name = "chosen"
+
+		arcpy.AddField_management(parcels, field_name, "TEXT")
+		arcpy.CalculateField_management(parcels, field_name, "FALSE", expression_type="PYTHON_9.3")
+
+		# select by location the new boundary
+		parcels_layer = "parcels_layer"
+		arcpy.MakeFeatureLayer_management(parcels, parcels_layer)
+
+		# select the parcels that are part of the new location, and mark the "chosen" field as a true value
+		try:
+			arcpy.SelectLayerByLocation_management(parcels_layer, selection_type, self.moved_location.boundary_polygon)
+			arcpy.CalculateField_management(parcels, field_name, "TRUE", expression_type="PYTHON_9.3")
+		finally:
+			arcpy.Delete_management(parcels_layer)
+
+	def _make_location(self, polygon, before_after="before", search_distance=30000):
+
 		location = RelocationStatistics()
 		location.name = self.name
 		location.short_name = self.name
 		location.boundary_polygon = polygon
 		location.region = self.region
-		location.save()
+		location.search_distance = search_distance
+		location.layers = os.path.split(polygon)[0]
+		location.boundary_polygon_name = os.path.split(polygon)[1]
+		location.initial()
+
 		if before_after == "before":
 			self.before_location = location
 		elif before_after == "after":
 			self.moved_location = location
+
 		location.save()  # this line is because I don't fully understand what's going on - I need to save the object before making the relationship, but I think I need to save it afterward as well.
+
+		# TODO: This is a really silly hack and seems super wrong. Need to set the value before saving the parcels object so that the relationship constraint is ok for parcels, but need to set it after saving so that the relationship constraint works for the analysis object? Silly
+		if before_after == "before":
+			self.before_location = location
+		elif before_after == "after":
+			self.moved_location = location
+
+	def setup_location(self, location):
+		location.spatial_data.original_layer = location.boundary_polygon
+		location.spatial_data.setup()
+		location.read_boundary_info()  # read the spatial results back to the polygon
+		location.save()
 
 	# TODO: This method needs to be refactored based on the changes to this object and its relationships
 	def load_from_dict(self, dictionary, raise_errors=False):
@@ -842,7 +977,7 @@ class RelocatedTown(Analysis):
 		:param dictionary:
 		:return:
 		"""
-		for attr in self._meta.get_all_field_names():
+		for attr in get_field_names(self):
 			try:
 				setattr(self, attr, dictionary[attr])
 			except KeyError:  # if the dictionary doesn't have this attribute
