@@ -241,24 +241,28 @@ class Region(models.Model):
 		self.compute_floodplain_distance()
 		self.save()
 
-	def compute_floodplain_distance(self, cell_size=30):
+	def compute_floodplain_distance(self, cell_size=30, force=False):
+
+		if self.floodplain_distance and not force:  # if we already have a raster and we're not trying to regenerate it
+			return
 
 		arcpy.CheckOutExtension("Spatial")
-		stored_environments = gis.store_environments(["mask", "extent", "outputCoordinateSystem"])  # back up the existing settings for environment variables
+		stored_environments = gis.store_environments(["mask", "extent", "cellSize", "outputCoordinateSystem"])  # back up the existing settings for environment variables
 		try:
 			if self.extent_polygon is None:
 				raise ValueError("DEM is not defined - can't make floodplain distance because distance will be huge")
 
-			processing_log.debug("Extent Polygon: {0:s}".format(self.extent_polygon))
+			processing_log.debug("Computing floodplain distance raster. Extent Polygon: {0:s}".format(self.extent_polygon))
 			arcpy.env.mask = self.extent_polygon  # set the analysis to only occur as large as the parcels layer
 			arcpy.env.extent = self.extent_polygon
+			arcpy.env.cellSize = cell_size
 
 			dem_spatial_reference = arcpy.Describe(self.dem).spatialReference
 			arcpy.env.outputCoordinateSystem = dem_spatial_reference  # doing this because after the extent polygon used the outputCoordinateSystem environment, this started having troubles with spatial references - let's make it explicit
 
 			geoprocessing_log.info("Computing Floodplain Distance")
 
-			distance_raster = generate_gdb_filename("floodplain_distance_raster", gdb=self.derived_layers)
+			distance_raster = generate_gdb_filename("{0:s}_floodplain_distance_raster".format(self.short_name), gdb=self.derived_layers)
 			processing_log.debug("Distance raster: {0:s}".format(distance_raster))
 
 			if RUN_GEOPROCESSING:
@@ -429,8 +433,9 @@ class PolygonStatistics(models.Model):
 		"""
 			Runs calculate field on the given statistic field in order to rescale the values to be relative to another value. offset value is subtracted from the existing value
 		"""
-
-		arcpy.CalculateField_management(self.layer, field, expression="!{0:s}! - {1:s}".format(field, offset_value), expression_type="PYTHON_9.3")
+		if offset_value is None:
+			offset_value = 0
+		arcpy.CalculateField_management(self.layer, field, expression="!{0:s}! - float({1:s})".format(field, str(offset_value)), expression_type="PYTHON_9.3")
 
 	def check_values(self):
 		"""
@@ -599,7 +604,7 @@ class Location(InheritanceCastModel):
 
 	spatial_data = models.OneToOneField(LocationInformation, related_name="location")
 
-	search_distance = models.IntegerField(default=25000)  # meters
+	search_distance = models.CharField(max_length=50, default="25000 Meters")  # meters
 	search_area = models.FilePathField(path=LOCATIONS_DIRECTORY, recursive=True, max_length=255, allow_folders=False, allow_files=True, null=True, blank=True, editable=False)  # storage for boundary_polygon buffered by search_distance
 
 	def initial(self):
@@ -761,16 +766,16 @@ class RelocationStatistics(Location):
 	# TODO: these attributes might get moved up to PolygonStatistics at some point along with a function to extract them from the layer
 	stat_centroid_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_centroid_distance_to_original_boundary = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_min_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_max_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_mean_floodplain_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_min_distance_to_floodplain = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_max_distance_to_floodplain = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_mean_distance_to_floodplain = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_min_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_max_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_mean_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_min_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_max_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_mean_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	active = models.BooleanField(default=False)  # flag to indicate whether it can be used in an analysis
+	active = models.BooleanField(default=True)  # flag to indicate whether it can be used in an analysis
 
 	static_folder = "relocation_towns"
 
@@ -789,9 +794,15 @@ class RelocationStatistics(Location):
 			if field.startswith("stat_"):  # if the field is one of the ones we want to read
 				read_fields.append(field)  # add it to the list of fields to read
 
-		polygon_data = arcpy.SearchCursor(self.boundary_polygon)
+		layer_fields = [field.name for field in arcpy.ListFields(self.spatial_data.layer)]
+		common_fields = list(set(read_fields).intersection(layer_fields))  # gets rid of any fields that won't be in the data table
+		for field in read_fields:
+			if field not in layer_fields:
+				processing_log.warning("Field {0:s} is not available on the polygon for reading - probably a misspelling. Check the field name.".format(field))
+
+		polygon_data = arcpy.SearchCursor(self.spatial_data.layer)
 		for record in polygon_data:  # there will only be one
-			for field in read_fields:  # for all the fields we're interested in
+			for field in common_fields:  # for all the fields we're interested in
 				processing_log.info("Reading {0:s}".format(field))
 				setattr(self, field, record.getValue(field))  # get the value for the field from the spatial data and set the attribute here
 
@@ -837,7 +848,7 @@ class RelocatedTown(Analysis):
 	before_location = models.OneToOneField(RelocationStatistics, related_name="town_before")
 	moved_location = models.OneToOneField(RelocationStatistics, related_name="town_moved")
 
-	def relocation_setup(self, name, short_name, before, after, region, make_boundaries_from_structures=False, buffer_distance=100):
+	def relocation_setup(self, name, short_name, before, after, region, make_boundaries_from_structures=False, buffer_distance="100 Meters"):
 		"""
 			Creates the sub-location objects and attaches them here
 		:param name: Name of the city - locations will be based on this
@@ -872,7 +883,7 @@ class RelocatedTown(Analysis):
 
 		self.save()
 
-	def process_for_calibration(self, no_rescale=("stat_centroid_distance",)):
+	def process_for_calibration(self, no_rescale=("stat_centroid_distance_to_original_boundary",)):
 		"""
 
 			:param no_rescale: indicates which fields should not be rescaled based on the original data
@@ -881,8 +892,13 @@ class RelocatedTown(Analysis):
 
 		for field in get_field_names(self.before_location):
 			if field.startswith("stat_") and field not in no_rescale:  # if it's a statistics field and we're supposed to rescale it
-				processing_log.info("Rescaling field {0:s} with value {1:d}".format(field, getattr(self.before_location, field)))
-				self.parcels.rescale(field, getattr(self.before_location, field))  # get the value for the
+				value = getattr(self.before_location, field)
+				if value is None:
+					processing_log.warning("Value for rescaling field {0:s} is None - skipping rescale".format(field))
+					continue
+
+				processing_log.info("Rescaling field {0:s} with value {1:s}".format(field, str(value)))
+				self.parcels.rescale(field, value)  # get the value for the
 
 	def get_location(self):
 		return self.before_location
@@ -926,7 +942,7 @@ class RelocatedTown(Analysis):
 		field_name = "chosen"
 
 		arcpy.AddField_management(parcels, field_name, "TEXT")
-		arcpy.CalculateField_management(parcels, field_name, "FALSE", expression_type="PYTHON_9.3")
+		arcpy.CalculateField_management(parcels, field_name, "'FALSE'", expression_type="PYTHON_9.3")
 
 		# select by location the new boundary
 		parcels_layer = "parcels_layer"
@@ -935,11 +951,16 @@ class RelocatedTown(Analysis):
 		# select the parcels that are part of the new location, and mark the "chosen" field as a true value
 		try:
 			arcpy.SelectLayerByLocation_management(parcels_layer, selection_type, self.moved_location.boundary_polygon)
-			arcpy.CalculateField_management(parcels, field_name, "TRUE", expression_type="PYTHON_9.3")
+
+			# calculate field doesn't seem to only operate on the selection when using Python - annoying. Using Cursor instead
+			parcels = arcpy.UpdateCursor(parcels_layer, fields = field_name)
+			for record in parcels:
+				record.setValue(field_name, "TRUE")
+				parcels.updateRow(record)
 		finally:
 			arcpy.Delete_management(parcels_layer)
 
-	def _make_location(self, polygon, before_after="before", search_distance=30000):
+	def _make_location(self, polygon, before_after="before", search_distance="30000 Meters"):
 
 		location = RelocationStatistics()
 		location.name = self.name
@@ -955,6 +976,7 @@ class RelocatedTown(Analysis):
 			self.before_location = location
 		elif before_after == "after":
 			self.moved_location = location
+			self.moved_location.active = False  # will save us some time - we don't process the spatial data on inactive relocations
 
 		location.save()  # this line is because I don't fully understand what's going on - I need to save the object before making the relationship, but I think I need to save it afterward as well.
 
@@ -966,8 +988,9 @@ class RelocatedTown(Analysis):
 
 	def setup_location(self, location):
 		location.spatial_data.original_layer = location.boundary_polygon
-		location.spatial_data.setup()
-		location.read_boundary_info()  # read the spatial results back to the polygon
+		if location.active:
+			location.spatial_data.setup()
+			location.read_boundary_info()  # read the spatial results back to the polygon
 		location.save()
 
 	# TODO: This method needs to be refactored based on the changes to this object and its relationships
