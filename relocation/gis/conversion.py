@@ -50,13 +50,15 @@ def convert_to_temp_csv(features):
 	return filepath
 
 
-def features_to_dict(features, include_fields=None, exclude_fields=None):
+def features_to_dict_or_array(features, include_fields=None, exclude_fields=None, array=False, none_to=0):
 	"""
-		Takes an ArcGIS Feature class and turns it into a dictionary, excluding the Shape field
+		Takes an ArcGIS Feature class and turns it into a dictionary or multidimensional list, excluding the Shape field
 
-		include_fields and exclude fields are nboth meant to be lists. No conflict for using both (though it'd be silly).
+		when array == True, it makes a list of lists (suitable for sklearn), when False, it makes a list of dicts (suitable for CSVs)
+
+		include_fields and exclude fields are both meant to be lists. No conflict for using both (though it'd be silly).
 		include_fields is passed to the cursor and limits it to only those fields. Error is on the user. Exclude fields
-		kicks in after the cursor and is checked here.
+		kicks in after the cursor and is checked here.C:\
 	:param features:
 	:return:
 	"""
@@ -64,22 +66,40 @@ def features_to_dict(features, include_fields=None, exclude_fields=None):
 	fields = arcpy.ListFields(features)  # get the fields in the feature class
 
 	if include_fields:
-		rows = arcpy.SearchCursor(features, fields=include_fields)
+		real_fields = [field.name for field in fields]
+		to_include = list(set(real_fields).intersection(set(include_fields)))
+		include = ";".join(to_include)  # include only the fields that exist and then semicolon separate
+		geoprocessing_log.debug("include string is {0:s}".format(include))
+		rows = arcpy.SearchCursor(features, fields=include)
 	else:
 		rows = arcpy.SearchCursor(features)
 
-	feature_data_as_list_of_dicts = []
+	all_feature_data = []
 
 	if not exclude_fields:
 		exclude_fields = []  # don't want a mutable default - leave it as none, then set it empty here so we don't have to check below
 
 	for row in rows:  # for every row
-		feature_data_as_dict = {}
+		if array:
+			feature_data = []
+		else:
+			feature_data = {}
+
 		for field in fields:
+			if include_fields and field.name not in include_fields:
+				continue
 			if field.name.lower() == "shape" or field.name in exclude_fields:
 				continue
 
-			feature_data_as_dict[field.name] = row.getValue(field.name)
-			feature_data_as_list_of_dicts.append(feature_data_as_dict)
+			value = row.getValue(field.name)
+			if value is None:
+				value = none_to  # set the value as what we want to convert None objects to
 
-	return feature_data_as_list_of_dicts
+			if array:
+				feature_data.append(value)
+			else:
+				feature_data[field.name] = row.getValue(value)
+
+		all_feature_data.append(feature_data)
+
+	return all_feature_data

@@ -3,3 +3,7 @@ django-debug-toolbar
 celery
 arrow
 GDAL
+numpy
+scipy
+matplotlib
+scikit-learn

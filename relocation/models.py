@@ -19,7 +19,8 @@ geoprocessing_log = logging.getLogger("geoprocessing_log")
 
 import arcpy
 
-from FloodMitigation.local_settings import RUN_GEOPROCESSING
+from FloodMitigation.local_settings import RUN_GEOPROCESSING, ZONAL_STATS_BUG
+from FloodMitigation.settings import CHOSEN_FIELD
 
 from relocation.gis.temp import generate_gdb_filename
 
@@ -407,9 +408,28 @@ class PolygonStatistics(models.Model):
 		zonal_table = generate_gdb_filename(name_base="zonal_table", gdb=analysis.workspace, scratch=False)
 		processing_log.debug("Zonal Table is: {0:s}".format(zonal_table))
 		processing_log.debug("Features are: {0:s}".format(self.layer))
-		arcpy.sa.ZonalStatisticsAsTable(self.layer, self.id_field, raster, zonal_table, statistics_type="MIN_MAX_MEAN")
 
-		join_field = self.get_join_field(zonal_table)
+		value_field = self.get_join_field(self.layer)
+
+		if ZONAL_STATS_BUG:
+			# there's a bug in zonal stats in ArcGIS Pro 1.2 where polygon zones create incorrect output tables
+			# this works around it by rasterizing the polygon manually, then passing it into zonal stats.
+			# Not setting cell size to account for data in different projections
+			processing_log.debug("Doing zonal stats workaround - converting to raster")
+			temp_zone_raster = generate_gdb_filename("temp_zonal_raster", scratch=True)
+			zone_layer = arcpy.PolygonToRaster_conversion(self.layer, value_field=value_field, out_rasterdataset=temp_zone_raster, cell_assignment="CELL_CENTER")
+
+			join_field = "Value"  # since we're now using a raster, the join field changes
+			value_field = "Value"
+		else:
+			zone_layer = self.layer
+			value_field = self.id_field
+
+		arcpy.sa.ZonalStatisticsAsTable(zone_layer, value_field, raster, zonal_table, statistics_type="MIN_MAX_MEAN")
+
+		if not ZONAL_STATS_BUG:  # doing this here because we need to run zonal stats first to get this
+			join_field = self.get_join_field(zonal_table)
+
 		try:
 			geoprocessing_log.info("Joining {0:s} Zone Statistics to Parcels".format(name))
 			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MEAN", rename_attribute="stat_mean_{0:s}".format(name))
@@ -939,10 +959,10 @@ class RelocatedTown(Analysis):
 
 		# add field - default of 0
 		parcels = self.parcels.layer
-		field_name = "chosen"
+		field_name = CHOSEN_FIELD
 
-		arcpy.AddField_management(parcels, field_name, "TEXT")
-		arcpy.CalculateField_management(parcels, field_name, "'FALSE'", expression_type="PYTHON_9.3")
+		arcpy.AddField_management(parcels, field_name, "SHORT")
+		arcpy.CalculateField_management(parcels, field_name, "0", expression_type="PYTHON_9.3")
 
 		# select by location the new boundary
 		parcels_layer = "parcels_layer"
@@ -955,7 +975,7 @@ class RelocatedTown(Analysis):
 			# calculate field doesn't seem to only operate on the selection when using Python - annoying. Using Cursor instead
 			parcels = arcpy.UpdateCursor(parcels_layer, fields = field_name)
 			for record in parcels:
-				record.setValue(field_name, "TRUE")
+				record.setValue(field_name, "1")
 				parcels.updateRow(record)
 		finally:
 			arcpy.Delete_management(parcels_layer)

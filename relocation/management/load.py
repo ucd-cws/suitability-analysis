@@ -2,6 +2,8 @@ import os
 import csv
 import logging
 
+import numpy
+
 from FloodMitigation.settings import BASE_DIR
 from relocation.models import Region, RelocatedTown
 from relocation.gis import conversion
@@ -55,7 +57,7 @@ def load_towns(town_name=None):
 
 
 def export_relocation_information(include_fields=("stat_centroid_elevation",
-												  "stat_centroid_distance",
+												  "stat_centroid_distance_to_original_boundary",
 												  "stat_min_elevation",
 												  "stat_max_elevation",
 												  "stat_mean_elevation",
@@ -65,7 +67,6 @@ def export_relocation_information(include_fields=("stat_centroid_elevation",
 												  "stat_mean_distance_to_floodplain",
 												  "stat_min_distance_to_floodplain",
 												  "stat_max_distance_to_floodplain",
-												  "stat_centroid_elevation",
 												  "chosen",
 												  )
 								  ):
@@ -75,11 +76,36 @@ def export_relocation_information(include_fields=("stat_centroid_elevation",
 
 	all_records = []
 	for town in RelocatedTown.objects.all():
-		if not town.active:  # if town is deactivated
-			continue
 
-		all_records += conversion.features_to_dict(town.parcels.layer, include_fields=include_fields)
+		all_records += conversion.features_to_dict_or_array(town.parcels.layer, include_fields=include_fields)
 
-		with open(r"C:\Users\dsx.AD3\Code\FloodMitigation\relocation\calibration\output_data.csv", 'w') as write_file:
-			csv_writer = csv.DictWriter(write_file, fieldnames=include_fields)
-			csv_writer.writerows(all_records)
+	with open(r"C:\Users\dsx.AD3\Code\FloodMitigation\relocation\calibration\output_data.csv", 'w',) as write_file:
+		csv_writer = csv.DictWriter(write_file, fieldnames=include_fields, lineterminator='\n',)  # needs the lineterminator option or else it writes an extra newline on Python 3
+		csv_writer.writeheader()
+		csv_writer.writerows(all_records)
+
+
+def get_relocation_information_as_ndarray(include_fields=("stat_centroid_elevation",
+												  "stat_centroid_distance_to_original_boundary",
+												  "stat_min_elevation",
+												  "stat_max_elevation",
+												  "stat_mean_elevation",
+												  "stat_min_slope",
+												  "stat_max_slope",
+												  "stat_mean_slope",
+												  "stat_mean_distance_to_floodplain",
+												  "stat_min_distance_to_floodplain",
+												  "stat_max_distance_to_floodplain",
+												  "chosen",
+												  )
+								  ):
+
+	data_records = []
+
+	for town in RelocatedTown.objects.all():
+		new_data = conversion.features_to_dict_or_array(town.parcels.layer, include_fields=include_fields, array=True)
+		data_records += new_data
+
+	ndarray_data_records = numpy.asarray(data_records)
+
+	return ndarray_data_records
