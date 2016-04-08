@@ -30,7 +30,7 @@ def load_regions(region_name=None):
 			region.make(**record)  # pass the record in to "make" as kwargs
 
 
-def load_towns(town_name=None):
+def load_towns(town_names=None):
 	relocation_csv_file = os.path.join(BASE_DIR, "regions", "relocated_town_load.csv")
 	with open(relocation_csv_file, 'r') as csv_open:
 		csv_records = csv.DictReader(csv_open)
@@ -39,7 +39,8 @@ def load_towns(town_name=None):
 			if not record["name"]:  # basically, if we're at the end, on a blank line
 				continue
 
-			if town_name and not record["name"] == town_name:  # allows us to run this and specify a name of the town to load in order to go one by one
+			if town_names and not record["name"] in town_names:  # allows us to run this and specify a name of the town to load in order to go one by one
+				processing_log.debug("Skipping town {0:s}".format(record["name"]))
 				continue
 
 			processing_log.info("Loading New Town: {0:s}".format(record["name"]))
@@ -103,6 +104,7 @@ def get_relocation_information_as_ndarray(include_fields=("stat_centroid_elevati
 	data_records = []
 
 	for town in RelocatedTown.objects.all():
+		processing_log.info("Loading town {0:s}".format(town.name))
 		new_data = conversion.features_to_dict_or_array(town.parcels.layer, include_fields=include_fields, array=True)
 		data_records += new_data
 

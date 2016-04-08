@@ -23,7 +23,7 @@ df1<-dat
 df1$chosen<-as.numeric(df1$chosen)
 
 # subset to the dataframe for the model
-df1_sub<-select(df1, id, chosen, min_elevation_change:mean_floodplain_distance_change, dom_land_numeric)
+df1_sub<-select(df1, stat_centroid_elevation:chosen)
 
 # Scale and center function (to avoid attributing issues associated with "scale()" function)
 scale_center<-function(x){
@@ -35,8 +35,8 @@ scale_center<-function(x){
 names(df1_sub)
 
 df1_s<-df1_sub %>%
-  group_by(id, chosen) %>% 
-  select(min_elevation_change:dom_land_numeric) %>% 
+  group_by(chosen) %>% 
+  select(stat_centroid_elevation:chosen) %>% 
   sapply(FUN =scale_center) %>% #applies to all cols
   cbind(df1_sub[,c(1:2)]) %>% # rebind the original ID column 
   as.data.frame()
@@ -51,16 +51,17 @@ names(df1_s)
 # rename outcomes
 dlist <- list(
   chosen=df1_s$chosen,
-  min_elev_delt=df1_s$stat_min_elevation_change,
-  max_elev_delt=df1_s$stat_max_elevation_change,
-  mean_elev_delt=df1_s$stat_mean_elevation_change,
+  centroid_dist=df1_s$stat_centroid_distance_to_original_boundary,
+  min_elev_delt=df1_s$stat_min_elevation,
+  max_elev_delt=df1_s$stat_max_elevation,
+  mean_elev_delt=df1_s$stat_mean_elevation,
   cent_elev=df1_s$stat_centroid_elevation,
-  minslope_delt=df1_s$stat_min_slope_change,
-  maxslope_delt=df1_s$stat_max_slope_change,
-  meanslope_delt=df1_s$stat_mean_slope_change,
-  min_floodist_delt=df1_s$stat_min_floodplain_distance_change,
-  max_floodist_delt=df1_s$stat_max_floodplain_distance_change,
-  mean_floodist_delt=df1_s$stat_mean_floodplain_distance_change,
+  minslope_delt=df1_s$stat_min_slope,
+  maxslope_delt=df1_s$stat_max_slope,
+  meanslope_delt=df1_s$stat_mean_slope,
+  min_floodist_delt=df1_s$stat_min_distance_to_floodplain,
+  max_floodist_delt=df1_s$stat_max_distance_to_floodplain,
+  mean_floodist_delt=df1_s$stat_mean_distance_to_floodplain
 )
 
 # basic logistic regression, fixed intercept and slope
@@ -70,12 +71,12 @@ m01 <- map(
     logit(p) <- a + bminE*min_elev_delt +bmaxE*max_elev_delt +bavgE*mean_elev_delt +
       bcentE*cent_elev + bminSl*minslope_delt + bmaxSl*maxslope_delt + 
       bavgSl*meanslope_delt + bminFld*min_floodist_delt + bmaxFld*max_floodist_delt +
-      bavgFld*mean_floodist_delt + bLnd*dom_land,
-    a ~ dnorm(0,10),
-    c(bminE,bmaxE,bavgE,bcentE,bminSl,bmaxSl,bavgSl,bminFld,bmaxFld,bavgFld,bLnd) ~ dnorm(0,10)
+      bavgFld*mean_floodist_delt + bCenDist*centroid_dist,
+    a ~ dnorm(0,11),
+    c(bminE,bmaxE,bavgE,bcentE,bminSl,bmaxSl,bavgSl,bminFld,bmaxFld,bavgFld,bLnd,bCenDist) ~ dnorm(0,11)
   ),
   data=dlist, start=list(a=0, bminE=0, bmaxE=0, bavgE=0, bcentE=0, bminSl=0,
-                         bmaxSl=0,bavgSl=0,bminFld=0,bmaxFld=0,bavgFld=0,bLnd=0))
+                         bmaxSl=0,bavgSl=0,bminFld=0,bmaxFld=0,bavgFld=0,bLnd=0,bCenDist=0))
 
 # summarize
 precis(m01) # this gives the scores in table format
