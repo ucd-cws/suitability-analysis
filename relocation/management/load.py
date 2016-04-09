@@ -7,6 +7,7 @@ import numpy
 from FloodMitigation.settings import BASE_DIR
 from relocation.models import Region, RelocatedTown
 from relocation.gis import conversion
+from relocation.regression import logistic
 
 processing_log = logging.getLogger("processing_log")
 
@@ -57,6 +58,12 @@ def load_towns(town_names=None):
 			town.process_for_calibration()
 
 
+def load_and_run():
+	load_regions()
+	load_towns()
+	logistic.run_and_validate(withhold=10000)
+
+
 def export_relocation_information(include_fields=("stat_centroid_elevation",
 												  "stat_centroid_distance_to_original_boundary",
 												  "stat_min_elevation",
@@ -65,9 +72,13 @@ def export_relocation_information(include_fields=("stat_centroid_elevation",
 												  "stat_min_slope",
 												  "stat_max_slope",
 												  "stat_mean_slope",
+												  "stat_min_road_distance",
+												  "stat_max_road_distance",
+												  "stat_mean_road_distance",
 												  "stat_mean_distance_to_floodplain",
 												  "stat_min_distance_to_floodplain",
 												  "stat_max_distance_to_floodplain",
+												  "stat_is_protected",
 												  "chosen",
 												  )
 								  ):
@@ -94,9 +105,16 @@ def get_relocation_information_as_ndarray(include_fields=("stat_centroid_elevati
 												  "stat_min_slope",
 												  "stat_max_slope",
 												  "stat_mean_slope",
+												  "stat_min_road_distance",
+												  "stat_max_road_distance",
+												  "stat_mean_road_distance",
 												  "stat_mean_distance_to_floodplain",
 												  "stat_min_distance_to_floodplain",
 												  "stat_max_distance_to_floodplain",
+												  "stat_min_protected_distance",
+												  "stat_max_protected_distance",
+												  "stat_mean_protected_distance",
+												  "stat_is_protected",
 												  "chosen",
 												  )
 								  ):

@@ -34,7 +34,7 @@ from relocation.gis import land_use
 from relocation.gis import roads
 from relocation.gis import geometry
 from relocation.gis import geojson
-from relocation.gis import concave_hull
+from relocation.gis import common
 from relocation.gis import parcels
 from relocation.gis import conversion
 
@@ -139,6 +139,8 @@ class Region(models.Model):
 	parcels = models.FilePathField(null=True, blank=True, editable=False)
 
 	floodplain_distance = models.FilePathField(null=True, blank=True, editable=True)
+	road_distance = models.FilePathField(null=True, blank=True, editable=True)
+	protected_areas_distance = models.FilePathField(null=True, blank=True, editable=True)
 
 	leveed_areas = models.FilePathField(null=True, blank=True, editable=False)
 
@@ -239,13 +241,36 @@ class Region(models.Model):
 			self.derived_layers = os.path.join(self.base_directory, derived_name)
 			self.save()
 
-		self.compute_floodplain_distance()
+		self.compute_floodplain_distance(expand_search_area="50000 Meters")
+		self.compute_major_road_distance()
+		self.compute_protected_areas_distance()
 		self.save()
 
-	def compute_floodplain_distance(self, cell_size=30, force=False):
-
+	def compute_floodplain_distance(self, force=False, expand_search_area=""):
 		if self.floodplain_distance and not force:  # if we already have a raster and we're not trying to regenerate it
 			return
+
+		self.floodplain_distance = self.compute_raster_distance(self.floodplain_areas, "floodplain_distance", expand_search_area=expand_search_area)
+
+		self.save()
+
+	def compute_major_road_distance(self, force=False):
+		if self.road_distance and not force:  # if we already have a raster and we're not trying to regenerate it
+			return
+
+		self.road_distance = self.compute_raster_distance(self.tiger_lines, "major_road_distance")
+
+		self.save()
+
+	def compute_proteceted_areas_distance(self, force=False, expand_search_area="80000 Meters"):
+		if self.protected_areas_distance and not force:  # if we already have a raster and we're not trying to regenerate it
+			return
+
+		self.protected_areas_distance = self.compute_raster_distance(self.protected_areas, "protected_distance", expand_search_area=expand_search_area)
+
+		self.save()
+
+	def compute_raster_distance(self, from_features, variable_name, cell_size=30, expand_search_area=""):
 
 		arcpy.CheckOutExtension("Spatial")
 		stored_environments = gis.store_environments(["mask", "extent", "cellSize", "outputCoordinateSystem"])  # back up the existing settings for environment variables
@@ -253,32 +278,38 @@ class Region(models.Model):
 			if self.extent_polygon is None:
 				raise ValueError("DEM is not defined - can't make floodplain distance because distance will be huge")
 
-			processing_log.debug("Computing floodplain distance raster. Extent Polygon: {0:s}".format(self.extent_polygon))
-			arcpy.env.mask = self.extent_polygon  # set the analysis to only occur as large as the parcels layer
-			arcpy.env.extent = self.extent_polygon
+			if expand_search_area != "":
+				extent_polygon = self.extent_polygon
+			else:
+				geoprocessing_log.info("Creating expanded search window for raster distance")
+				extent_polygon = generate_gdb_filename("buffered_search_area", scratch=True)
+				arcpy.Buffer_analysis(self.extent_polygon, extent_polygon, expand_search_area, dissolve_option="ALL")
+
+			processing_log.debug("Computing {} raster. Extent Polygon: {}".format(variable_name, extent_polygon))
+			arcpy.env.mask = extent_polygon  # set the analysis to only occur as large as the parcels layer
+			arcpy.env.extent = extent_polygon
 			arcpy.env.cellSize = cell_size
 
 			dem_spatial_reference = arcpy.Describe(self.dem).spatialReference
 			arcpy.env.outputCoordinateSystem = dem_spatial_reference  # doing this because after the extent polygon used the outputCoordinateSystem environment, this started having troubles with spatial references - let's make it explicit
 
-			geoprocessing_log.info("Computing Floodplain Distance")
+			geoprocessing_log.info("Computing {} Distance".format(variable_name))
 
-			distance_raster = generate_gdb_filename("{0:s}_floodplain_distance_raster".format(self.short_name), gdb=self.derived_layers)
+			distance_raster = generate_gdb_filename("{}_{}_raster".format(self.short_name, variable_name), gdb=self.derived_layers)
 			processing_log.debug("Distance raster: {0:s}".format(distance_raster))
 
 			if RUN_GEOPROCESSING:
-				processing_log.info(self.floodplain_areas)
-				distance_raster_unsaved = arcpy.sa.EucDistance(self.floodplain_areas, cell_size=cell_size)
+				processing_log.info(from_features)
+				distance_raster_unsaved = arcpy.sa.EucDistance(from_features, cell_size=cell_size)
 				distance_raster_unsaved.save(distance_raster)
 			else:
 				geoprocessing_log.warning("Skipping Geoprocessing for floodplain distance because RUN_GEOPROCESSING is False")
 
-			self.floodplain_distance = distance_raster
-			self.save()
-
 		finally:
 			gis.reset_environments(stored_environments=stored_environments)  # restore the environment variable settings to original values
 			arcpy.CheckInExtension("Spatial")
+
+		return distance_raster
 
 	def clean_working(self):
 		pass
@@ -352,9 +383,11 @@ class PolygonStatistics(models.Model):
 		self.duplicate_layer()  # copy the parcels out so that we can keep a fresh copy for reprocessing still
 		if RUN_GEOPROCESSING:
 			self.compute_distance_to_floodplain()
+			self.compute_distance_to_roads()
 			self.compute_centroid_elevation()
 			self.compute_slope_and_elevation()
 			self.compute_centroid_distances()
+			self.mark_protected()
 		else:
 			geoprocessing_log.warning("Skipping Geoprocessing for parcels because RUN_GEOPROCESSING is False")
 		self.save()
@@ -468,6 +501,10 @@ class PolygonStatistics(models.Model):
 		if not self.id_field:
 			raise ValueError("Parcel ID/ObjectID field (attribute: id_field) is not defined - can't proceed with computations!")
 
+	def mark_protected(self):
+		analysis = self.get_analysis_object()
+		common.mark_polygons(self.layer, analysis.region.protected_areas, "stat_is_protected")
+
 	def compute_slope_and_elevation(self):
 
 		analysis = self.get_analysis_object()
@@ -523,6 +560,14 @@ class PolygonStatistics(models.Model):
 		processing_log.info("Getting Distance To Floodplain")
 
 		self.zonal_min_max_mean(analysis.region.floodplain_distance, "distance_to_floodplain")
+
+	def compute_distance_to_roads(self):
+		self.check_values()
+		analysis = self.get_analysis_object()
+
+		processing_log.info("Getting Distance To Roads")
+
+		self.zonal_min_max_mean(analysis.region.road_distance, "road_distance")
 
 	def as_geojson(self):
 		geodatabase, layer_name = os.path.split(self.layer)
@@ -598,17 +643,25 @@ class PolygonData(models.Model):
 
 	# TODO: Check that these field names match what's being generated on PolygonStatistics
 	# fields starting with stat will be dumped to csvs - these will match the field names from the attribute table, so they can be pulled in by a generic function
-	stat_min_elevation = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
-	stat_max_elevation = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
-	stat_mean_elevation = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
-	stat_min_slope = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
-	stat_max_slope = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
-	stat_mean_slope = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
-	stat_centroid_elevation = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+	stat_min_elevation = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_max_elevation = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_mean_elevation = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_min_slope = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_max_slope = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_mean_slope = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_min_road_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_max_road_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_mean_road_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_centroid_elevation = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
 
-	stat_min_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
-	stat_max_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
-	stat_mean_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=3)
+	stat_is_protected = models.IntegerField(null=True, blank=True)
+	stat_min_protected_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_max_protected_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_mean_protected_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+
+	stat_min_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_max_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
+	stat_mean_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
 
 
 class Location(InheritanceCastModel):
@@ -795,6 +848,14 @@ class RelocationStatistics(Location):
 	stat_min_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_max_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_mean_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_min_road_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_max_road_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_mean_road_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_is_protected = models.IntegerField(null=True, blank=True)
+	stat_min_protected_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_max_protected_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	stat_mean_protected_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+
 	active = models.BooleanField(default=True)  # flag to indicate whether it can be used in an analysis
 
 	static_folder = "relocation_towns"
@@ -956,29 +1017,7 @@ class RelocatedTown(Analysis):
 		"""
 			Takes the parcels layer for the analysis object and adds a field that it uses to mark the parcels as chosen or not chosen
 		"""
-
-		# add field - default of 0
-		parcels = self.parcels.layer
-		field_name = CHOSEN_FIELD
-
-		arcpy.AddField_management(parcels, field_name, "SHORT")
-		arcpy.CalculateField_management(parcels, field_name, "0", expression_type="PYTHON_9.3")
-
-		# select by location the new boundary
-		parcels_layer = "parcels_layer"
-		arcpy.MakeFeatureLayer_management(parcels, parcels_layer)
-
-		# select the parcels that are part of the new location, and mark the "chosen" field as a true value
-		try:
-			arcpy.SelectLayerByLocation_management(parcels_layer, selection_type, self.moved_location.boundary_polygon)
-
-			# calculate field doesn't seem to only operate on the selection when using Python - annoying. Using Cursor instead
-			parcels = arcpy.UpdateCursor(parcels_layer, fields = field_name)
-			for record in parcels:
-				record.setValue(field_name, "1")
-				parcels.updateRow(record)
-		finally:
-			arcpy.Delete_management(parcels_layer)
+		common.mark_polygons(self.parcels.layer, self.moved_location.boundary_polygon, CHOSEN_FIELD)
 
 	def _make_location(self, polygon, before_after="before", search_distance="30000 Meters"):
 
