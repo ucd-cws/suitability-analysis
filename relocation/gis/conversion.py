@@ -50,6 +50,32 @@ def convert_to_temp_csv(features):
 	return filepath
 
 
+def features_to_dicts(features, chosen_field, none_to=0):
+	fields = arcpy.ListFields(features)  # get the fields in the feature class
+
+	fields_to_include = [chosen_field]
+	for field in fields:  # get all of the fields that start with "stat"
+		if field.name.startswith("stat_"):
+			fields_to_include.append(field.name)
+
+	all_feature_data = []
+
+	rows = arcpy.SearchCursor(features, fields=";".join(fields_to_include))
+	for row in rows:  # for every row
+		feature_data = {}
+
+		for field in fields_to_include:
+			value = row.getValue(field)
+			if value is None:
+				value = none_to  # set the value as what we want to convert None objects to
+
+			feature_data[field] = value
+
+		all_feature_data.append(feature_data)
+
+	return all_feature_data
+
+
 def features_to_dict_or_array(features, include_fields=None, exclude_fields=None, array=False, none_to=0):
 	"""
 		Takes an ArcGIS Feature class and turns it into a dictionary or multidimensional list, excluding the Shape field
@@ -64,7 +90,6 @@ def features_to_dict_or_array(features, include_fields=None, exclude_fields=None
 	"""
 
 	fields = arcpy.ListFields(features)  # get the fields in the feature class
-
 	if include_fields:
 		real_fields = [field.name for field in fields]
 		to_include = list(set(real_fields).intersection(set(include_fields)))
@@ -98,7 +123,7 @@ def features_to_dict_or_array(features, include_fields=None, exclude_fields=None
 			if array:
 				feature_data.append(value)
 			else:
-				feature_data[field.name] = row.getValue(value)
+				feature_data[field.name] = value
 
 		all_feature_data.append(feature_data)
 

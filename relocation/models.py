@@ -144,6 +144,8 @@ class Region(models.Model):
 
 	leveed_areas = models.FilePathField(null=True, blank=True, editable=False)
 
+	# distance_rasters
+
 	def make(self, name, short_name, dem=None, slope=None, nlcd=None, census_places=None, protected_areas=None,
 			 floodplain_areas=None, tiger_lines=None, parcels=None, layers=None, base_directory=None, crs_string=None):
 		"""
@@ -241,12 +243,13 @@ class Region(models.Model):
 			self.derived_layers = os.path.join(self.base_directory, derived_name)
 			self.save()
 
-		self.compute_floodplain_distance(expand_search_area="50000 Meters")
+		self.compute_floodplain_distance()
 		self.compute_major_road_distance()
 		self.compute_protected_areas_distance()
+		self.compute_rivers_distance()
 		self.save()
 
-	def compute_floodplain_distance(self, force=False, expand_search_area=""):
+	def compute_floodplain_distance(self, force=False, expand_search_area="50000 Meters"):
 		if self.floodplain_distance and not force:  # if we already have a raster and we're not trying to regenerate it
 			return
 
@@ -258,11 +261,11 @@ class Region(models.Model):
 		if self.road_distance and not force:  # if we already have a raster and we're not trying to regenerate it
 			return
 
-		self.road_distance = self.compute_raster_distance(self.tiger_lines, "major_road_distance")
+		self.road_distance = self.compute_raster_distance(self.tiger_lines, "major_road_distance", expand_search_area=None)
 
 		self.save()
 
-	def compute_proteceted_areas_distance(self, force=False, expand_search_area="80000 Meters"):
+	def compute_protected_areas_distance(self, force=False, expand_search_area="80000 Meters"):
 		if self.protected_areas_distance and not force:  # if we already have a raster and we're not trying to regenerate it
 			return
 
@@ -270,7 +273,41 @@ class Region(models.Model):
 
 		self.save()
 
-	def compute_raster_distance(self, from_features, variable_name, cell_size=30, expand_search_area=""):
+	def compute_rivers_distance(self, clear_existing=False):
+
+		if clear_existing:
+			for raster in self.distance_rasters.objects.filter(grouping = "rivers"):
+				raster.active = False
+				raster.save()
+
+		processing_log.info("Computing Rivers Distances")
+
+		# clip the features here because otherwise it will attempt to load all of the rivers rather than just the region
+		clipped_features = generate_gdb_filename("clipped_rivers", scratch=True)
+		arcpy.Clip_analysis(self.rivers, self.extent_polygon, clipped_features)  # make it be only within the raster's extent before proceeding
+
+		for upstream_area in (0,1000,10000,100000, 1000000):  # run for every stream order
+			processing_log.info("Computing Distance to Streams with Upstream Area >= {}".format(upstream_area))
+			new_raster = DistanceRaster()
+			new_raster.grouping = "rivers"
+			new_raster.region = self
+			new_raster.name = "rivers_distance_UA_{}".format(upstream_area)
+			new_raster.metadata = "Distance to rivers with a upstream area greater than or equal to {}".format(upstream_area)
+
+			layer = "stream_layer"
+			arcpy.MakeFeatureLayer_management(clipped_features, layer, "TotDASqKM >= {}".format(upstream_area))
+			temp_features = generate_gdb_filename("temp_streams", scratch=True)
+			arcpy.CopyFeatures_management(layer, temp_features)
+			try:
+				new_raster.path = self.compute_raster_distance(temp_features, new_raster.name,)
+			finally:
+				arcpy.Delete_management(layer)  # remove the feature layer
+
+			new_raster.save()
+
+		self.save()
+
+	def compute_raster_distance(self, from_features, variable_name, cell_size=30, expand_search_area=None):
 
 		arcpy.CheckOutExtension("Spatial")
 		stored_environments = gis.store_environments(["mask", "extent", "cellSize", "outputCoordinateSystem"])  # back up the existing settings for environment variables
@@ -278,12 +315,12 @@ class Region(models.Model):
 			if self.extent_polygon is None:
 				raise ValueError("DEM is not defined - can't make floodplain distance because distance will be huge")
 
-			if expand_search_area != "":
+			if not expand_search_area:
 				extent_polygon = self.extent_polygon
 			else:
-				geoprocessing_log.info("Creating expanded search window for raster distance")
+				geoprocessing_log.info("Creating expanded search window for raster distance - expanding by {}".format(expand_search_area))
 				extent_polygon = generate_gdb_filename("buffered_search_area", scratch=True)
-				arcpy.Buffer_analysis(self.extent_polygon, extent_polygon, expand_search_area, dissolve_option="ALL")
+				arcpy.Buffer_analysis(self.extent_polygon, extent_polygon, buffer_distance_or_field=expand_search_area)
 
 			processing_log.debug("Computing {} raster. Extent Polygon: {}".format(variable_name, extent_polygon))
 			arcpy.env.mask = extent_polygon  # set the analysis to only occur as large as the parcels layer
@@ -333,11 +370,20 @@ class Region(models.Model):
 		return layers
 
 	def __str__(self):
-		return six.b(self.name)
+		return self.name
 
 	def __unicode__(self):
 		return six.u(self.name)
-		
+
+
+class DistanceRaster(models.Model):
+	path = models.FilePathField()
+	name = models.CharField(max_length=255)
+	region = models.ForeignKey(Region, related_name="distance_rasters")
+	grouping = models.CharField(max_length=50, null=True, blank=True)  # meant to be a way to group by something like "rivers"
+	metadata = models.TextField()  # for noting what went into it
+	active = models.BooleanField(default=True)
+
 		
 class RegionForm(forms.ModelForm):
 	dem_name = forms.ChoiceField()
@@ -387,7 +433,9 @@ class PolygonStatistics(models.Model):
 			self.compute_centroid_elevation()
 			self.compute_slope_and_elevation()
 			self.compute_centroid_distances()
+			self.compute_distance_rasters()
 			self.mark_protected()
+			self.compute_distance_to_protected_areas()
 		else:
 			geoprocessing_log.warning("Skipping Geoprocessing for parcels because RUN_GEOPROCESSING is False")
 		self.save()
@@ -552,6 +600,16 @@ class PolygonStatistics(models.Model):
 			else:
 				six.reraise(*sys.exc_info())
 
+	def compute_distance_rasters(self):
+		self.check_values()
+		analysis = self.get_analysis_object()
+
+		processing_log.info("Getting Distance Raster Distances")
+
+		for distance_raster in analysis.region.distance_rasters.all():
+			processing_log.info("Getting Min/Max/Mean distance to {}".format(distance_raster.name))
+			self.zonal_min_max_mean(distance_raster, distance_raster.name)
+
 	def compute_distance_to_floodplain(self):
 
 		self.check_values()
@@ -568,6 +626,14 @@ class PolygonStatistics(models.Model):
 		processing_log.info("Getting Distance To Roads")
 
 		self.zonal_min_max_mean(analysis.region.road_distance, "road_distance")
+
+	def compute_distance_to_protected_areas(self):
+		self.check_values()
+		analysis = self.get_analysis_object()
+
+		processing_log.info("Getting Distance To Protected Areas")
+
+		self.zonal_min_max_mean(analysis.region.protected_areas_distance, "protected_distance")
 
 	def as_geojson(self):
 		geodatabase, layer_name = os.path.split(self.layer)
@@ -628,42 +694,6 @@ class LocationInformation(PolygonStatistics):
 				return relocated_statistics.town_moved
 
 
-class PolygonData(models.Model):
-	"""
-		This object is created to represent a polygon in the django db -
-
-		We need this class because we need to read in the features and make the output relative to the input. So, when we write out the CSV,
-		we need to make the results relative to the original location
-	"""
-
-	feature_class = models.ForeignKey(LocationInformation, related_name="features")
-
-	objectid = models.IntegerField()
-	name = models.CharField(max_length=100)
-
-	# TODO: Check that these field names match what's being generated on PolygonStatistics
-	# fields starting with stat will be dumped to csvs - these will match the field names from the attribute table, so they can be pulled in by a generic function
-	stat_min_elevation = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_max_elevation = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_mean_elevation = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_min_slope = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_max_slope = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_mean_slope = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_min_road_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_max_road_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_mean_road_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_centroid_elevation = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-
-	stat_is_protected = models.IntegerField(null=True, blank=True)
-	stat_min_protected_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_max_protected_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_mean_protected_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-
-	stat_min_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_max_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-	stat_mean_floodplain_distance = models.DecimalField(null=True, blank=True, max_digits=16, decimal_places=4)
-
-
 class Location(InheritanceCastModel):
 	name = models.CharField(max_length=255)
 	short_name = models.SlugField(blank=False, null=False)
@@ -718,7 +748,7 @@ class Location(InheritanceCastModel):
 		self.save()
 
 	def __str__(self):
-		return six.b(self.name)
+		return self.name
 
 	def __unicode__(self):
 		return six.u(self.name)
@@ -868,6 +898,12 @@ class RelocationStatistics(Location):
 			Takes the processed data off of the boundary polygon and reads it back in to the attributes
 		"""
 
+		for raster in self.get_analysis_object().region.distance_rasters:
+			min_max_mean = MinMaxMean()
+			min_max_mean.relocation_statistic = self
+			min_max_mean.raster = raster
+			min_max_mean.save()
+
 		processing_log.debug("Reading data for {0:s} back to object".format(self.name))
 		read_fields = []
 		available_fields = get_field_names(self)
@@ -886,6 +922,22 @@ class RelocationStatistics(Location):
 			for field in common_fields:  # for all the fields we're interested in
 				processing_log.info("Reading {0:s}".format(field))
 				setattr(self, field, record.getValue(field))  # get the value for the field from the spatial data and set the attribute here
+
+			for data in self.min_max_means:
+				min_field = "stat_min_{}".format(data.raster.name)
+				max_field = "stat_max_{}".format(data.raster.name)
+				mean_field = "stat_mean_{}".format(data.raster.name)
+
+				if min_field in layer_fields:
+					data.min = record.getValue(min_field)
+
+				if max_field in layer_fields:
+					data.max = record.getValue(max_field)
+
+				if mean_field in layer_fields:
+					data.mean = record.getValue(mean_field)
+
+				data.save()
 
 	def _validate(self):
 		"""
@@ -914,6 +966,15 @@ class RelocationStatistics(Location):
 		self.save()
 
 
+class MinMaxMean(models.Model):
+	min = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	max = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	mean = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+
+	raster = models.ForeignKey(DistanceRaster, related_name="min_max_means")
+	relocation_statistic = models.ForeignKey(RelocationStatistics, related_name="min_max_means", null=True, blank=True)
+
+
 class RelocatedTown(Analysis):
 	"""
 		A class for towns that have already successfully moved that helps us store attributes for
@@ -928,6 +989,8 @@ class RelocatedTown(Analysis):
 	moved_structures = models.FilePathField(null=True, blank=True)
 	before_location = models.OneToOneField(RelocationStatistics, related_name="town_before")
 	moved_location = models.OneToOneField(RelocationStatistics, related_name="town_moved")
+
+	pre_move_land_cover = models.FilePathField(null=True, blank=True)
 
 	def relocation_setup(self, name, short_name, before, after, region, make_boundaries_from_structures=False, buffer_distance="100 Meters"):
 		"""
@@ -1068,7 +1131,7 @@ class RelocatedTown(Analysis):
 					six.reraise(*sys.exc_info())
 
 	def __str__(self):
-		return six.u("Relocated Town: {0:s}".format(self.name))
+		return "Relocated Town: {0:s}".format(self.name)
 
 	def __unicode__(self):
 		return six.u("Relocated Town: {0:s}".format(self.name))
@@ -1095,7 +1158,7 @@ class Constraint(InheritanceCastModel):
 		self.run()
 
 	def __str__(self):
-		return six.b(self.name)
+		return self.name
 
 	def __unicode__(self):
 		return six.u(self.name)
@@ -1147,7 +1210,7 @@ class LandCoverChoice(models.Model):
 	value = models.IntegerField(choices=LAND_COVER_CHOICES, unique=True)
 
 	def __str__(self):
-		return six.b(self.value)
+		return self.value
 
 	def __unicode__(self):
 		return six.u(self.value)
