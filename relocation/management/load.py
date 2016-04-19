@@ -121,5 +121,28 @@ def export_relocation_information(include_fields=("stat_centroid_elevation",
 
 	return all_records
 
+def get_relocation_information_as_ndarray(include_fields=("stat_centroid_elevation",
+																  "stat_centroid_distance_to_original_boundary",
+																  "stat_min_elevation",
+																  "stat_max_elevation",
+																  "stat_mean_elevation",
+																  "stat_min_slope",
+																  "stat_max_slope",
+																  "stat_mean_slope",
+																  "stat_mean_distance_to_floodplain",
+																  "stat_min_distance_to_floodplain",
+																  "stat_max_distance_to_floodplain",
+																  "chosen",
+																  )
+												  ):
 
+	data_records = []
 
+	for town in RelocatedTown.objects.all():
+		processing_log.info("Loading town {0:s}".format(town.name))
+		new_data = conversion.features_to_dict_or_array(town.parcels.layer, include_fields=include_fields, array=True)
+		data_records += new_data
+
+	ndarray_data_records = numpy.asarray(data_records)
+
+	return ndarray_data_records

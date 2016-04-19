@@ -125,6 +125,12 @@ LOGGING = {
 			'class': 'logging.StreamHandler',
 			'formatter': 'simple',
 			},
+		'log_to_file': {
+			'level': 'DEBUG',
+			'class': 'logging.FileHandler',
+			'formatter': 'simple',
+			'filename': os.path.join(BASE_DIR, 'relocation.log'),
+			},
 		},
 	'loggers': {
 		'geoprocessing_log': {
@@ -144,6 +150,11 @@ LOGGING = {
 		},
 		'main': {
 			'handlers': ['log_to_stdout'],
+			'level': 'DEBUG',
+			'propagate': True,
+		},
+		'silent_error_log': {
+			'handlers': ['log_to_file'],
 			'level': 'DEBUG',
 			'propagate': True,
 		}

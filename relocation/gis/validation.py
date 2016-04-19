@@ -3,7 +3,7 @@ import logging
 import numpy as np
 
 from relocation.management import load
-from relocation.regression import logistic
+from relocation.regression import random_forests
 
 processing_log = logging.getLogger("processing_log")
 file_log = logging.getLogger("silent_error_log")
@@ -52,15 +52,16 @@ def validate_bounds(data_dict_list, valid_values=meters_degrees_valid_values_min
 
 
 def test_withholding(num_runs=3):
-	records = load.get_relocation_information_as_ndarray()
+	model = random_forests.ModelRunner()
+	model.load_data()
 	for withhold in range(1, 51):
 		withholding = withhold / 100  # range only works with ints, so this is a chap hack to get it to give me floats - probably less accurate than making my own stepper...
 		processing_log.info("Withholding Value at {}".format(withholding))
 		error_values = []
 		for run_num in range(num_runs):
 			processing_log.info('Run {}'.format(run_num))
-			model, x_validate, y_validate, pct_incorrect = logistic.run_and_validate(records, withhold=withholding)
-			error_values.append(pct_incorrect)
+			model.run_and_validate(withhold=withholding)
+			error_values.append(model.percent_incorrect)
 
 		error_array = np.asarray(error_values)
 		if num_runs > 2:

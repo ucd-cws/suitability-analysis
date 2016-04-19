@@ -1,7 +1,3 @@
-# Code source: Gaël Varoquaux
-# Modified for documentation by Jaques Grobler
-# License: BSD 3 clause
-
 import logging
 from random import shuffle
 
@@ -169,8 +165,17 @@ class ModelRunner(object):
 		processing_log.info("Percent incorrect for True: {}".format(self.percent_incorrect))
 
 	def feature_importance(self):
+
+		features_and_values = {}
+
 		for index, value in enumerate(self.model.feature_importances_):
-			processing_log.info("{}: {}".format(self.fields[index], value))
+			features_and_values[value] = self.fields[index]  # indexing by value so that we can sort
+
+		sorted_keys = list(features_and_values.keys())
+		sorted_keys.sort()
+
+		for value in sorted_keys:
+			processing_log.info("{}: {}".format(features_and_values[value], value))
 
 	def predict_new_dataset(self):
 		"""
