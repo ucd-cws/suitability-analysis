@@ -34,7 +34,8 @@ def load_regions(region_names=None):
 			try:
 				region.make(**record)  # pass the record in to "make" as kwargs
 			except:
-				region.delete()  # if we have an exception, delete the region object in the database to reduce clutter
+				if region.id is not None:
+					region.delete()  # if we have an exception, delete the region object in the database to reduce clutter
 				six.reraise(*sys.exc_info())
 
 def load_towns(town_names=None):
@@ -65,7 +66,8 @@ def load_towns(town_names=None):
 				town.process_for_calibration()
 
 			except:
-				town.delete()  # if we have an exception, delete the town object in the database to reduce clutter
+				if town.id is not None:
+					town.delete()  # if we have an exception, delete the town object in the database to reduce clutter
 				six.reraise(*sys.exc_info())
 
 def load_and_run(regions=True, towns=True):

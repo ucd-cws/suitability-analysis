@@ -63,7 +63,7 @@ def load_initial_data():
 	region.layers = r"C:\Users\dsx.AD3\Code\FloodMitigation\regions\SouthernIllinois\layers.gdb"
 	region.dem_name = "Flood_dem_10m_albers"
 	region.slope_name = "flood_slope_degree_albers"
-	region.nlcd_name = "nlcd_2011_land_cover"
+	region.land_cover_name = "nlcd_2011_land_cover"
 	region.census_places_name = "census_places_2015"
 	region.protected_areas_name = "protected_areas_2015"
 	region.floodplain_areas_name = "IL_unprotected_floodplain_2012"

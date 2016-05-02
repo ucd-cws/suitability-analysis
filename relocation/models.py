@@ -9,8 +9,6 @@ import six
 import sys
 import logging
 import os
-import shutil
-import traceback
 from itertools import chain
 
 # Get an instance of a logger
@@ -41,7 +39,7 @@ from relocation.gis import conversion
 from FloodMitigation.settings import BASE_DIR, GEOSPATIAL_DIRECTORY, REGIONS_DIRECTORY, LOCATIONS_DIRECTORY, DEBUG
 
 MERGE_CHOICES = (("INTERSECT", "INTERSECT"), ("ERASE", "ERASE"), ("UNION", "UNION"), ("RASTER_ADD", "RASTER_ADD"))
-LAND_COVER_CHOICES = (
+NLCD_LAND_COVER_CHOICES = (
 	(11, "11 - Open Water"),
 	(12, "12 - Perennial Ice/Snow"),
 	(21, "21 - Developed, Open Space"),
@@ -62,6 +60,23 @@ LAND_COVER_CHOICES = (
 	(82, "82 - Cultivated Crops"),
 	(90, "90 - Woody Wetlands"),
 	(95, "95 - Emergent Herbaceous Wetlands ")
+)
+
+HISTORIC_LAND_COVER_CHOICES = (  # used for remapping the numbers to categorical variables
+	(1, "Water"),
+	(2, "Developed"),
+	(6, "Mining"),
+	(7, "Barren"),
+	(8, "Deciduous_Forest"),
+	(9, "Evergreen_Forest"),
+	(10, "Mixed_Forest"),
+	(11, "Grassland"),
+	(12, "Shrubland"),
+	(13, "Cultivated_Cropland"),
+	(14, "Hay_Pasture_land"),
+	(15, "Herbaceous_Wetland"),
+	(16, "Woody_Wetland"),
+	(17, "Perennial_Ice_Snow"),
 )
 
 
@@ -123,8 +138,8 @@ class Region(models.Model):
 	dem = models.FilePathField(null=True, blank=True, editable=False)
 	slope_name = models.CharField(max_length=255, )
 	slope = models.FilePathField(null=True, blank=True, editable=False)
-	nlcd_name = models.CharField(max_length=255, )
-	nlcd = models.FilePathField(null=True, blank=True, editable=False)
+	land_cover_name = models.CharField(max_length=255, )
+	land_cover = models.FilePathField(null=True, blank=True, editable=False)
 	census_places_name = models.CharField(max_length=255, )
 	census_places = models.FilePathField(null=True, blank=True, editable=False)
 	protected_areas_name = models.CharField(max_length=255, )
@@ -138,37 +153,26 @@ class Region(models.Model):
 	parcels_name = models.CharField(max_length=255, null=True, blank=True)
 	parcels = models.FilePathField(null=True, blank=True, editable=False)
 
-	floodplain_distance = models.FilePathField(null=True, blank=True, editable=True)
-	road_distance = models.FilePathField(null=True, blank=True, editable=True)
-	protected_areas_distance = models.FilePathField(null=True, blank=True, editable=True)
+	# the following items are now distance rasters
+	# floodplain_distance = models.FilePathField(null=True, blank=True, editable=True)
+	# road_distance = models.FilePathField(null=True, blank=True, editable=True)
+	# protected_areas_distance = models.FilePathField(null=True, blank=True, editable=True)
 
-	leveed_areas = models.FilePathField(null=True, blank=True, editable=False)
+	# leveed_areas = models.FilePathField(null=True, blank=True, editable=False)
 
-	# distance_rasters
+	# distance_rasters  - foreign key from distance raster object
 
-	def make(self, name, short_name, dem=None, slope=None, nlcd=None, census_places=None, protected_areas=None,
-			 floodplain_areas=None, tiger_lines=None, parcels=None, layers=None, base_directory=None, crs_string=None):
+	def make(self, **kwargs):
 		"""
 			provides args and then runs setup
 		:return:
 		"""
-		self.name = name
-		self.short_name = short_name
-		self.crs_string = crs_string
 
-		self.layers = layers
-		self.base_directory = base_directory
+		for key in kwargs.keys():
+			setattr(self, key, kwargs[key])
 
-		self.dem = dem
 		processing_log.info("DEM is {0:s}".format(self.dem))
-		self.slope = slope
-		self.nlcd = nlcd
-		self.census_places = census_places
-		self.protected_areas = protected_areas
-		self.floodplain_areas = floodplain_areas
-		self.tiger_lines = tiger_lines
 
-		self.parcels = parcels
 		self.save()
 
 		self.setup(process_paths_from_name=False)
@@ -177,7 +181,7 @@ class Region(models.Model):
 	def _base_setup(self):
 		self.dem = os.path.join(str(self.layers), self.dem_name)
 		self.slope = os.path.join(str(self.layers), self.slope_name)
-		self.nlcd = os.path.join(str(self.layers), self.nlcd_name)
+		self.land_cover = os.path.join(str(self.layers), self.land_cover_name)
 		self.census_places = os.path.join(str(self.layers), self.census_places_name)
 		self.protected_areas = os.path.join(str(self.layers), self.protected_areas_name)
 		self.floodplain_areas = os.path.join(str(self.layers), self.floodplain_areas_name)
@@ -249,28 +253,33 @@ class Region(models.Model):
 		self.compute_rivers_distance()
 		self.save()
 
-	def compute_floodplain_distance(self, force=False, expand_search_area="50000 Meters"):
-		if self.floodplain_distance and not force:  # if we already have a raster and we're not trying to regenerate it
-			return
+	def compute_floodplain_distance(self, clear_existing=False, expand_search_area="50000 Meters"):
+		self.make_distance_raster(self.floodplain_areas, "floodplain_distance", grouping="floodplains", metadata="distance to floodplain data", clear_existing=clear_existing, expand_search_area=expand_search_area)
 
-		self.floodplain_distance = self.compute_raster_distance(self.floodplain_areas, "floodplain_distance", expand_search_area=expand_search_area)
+	def compute_major_road_distance(self, clear_existing=False):
+		self.make_distance_raster(self.tiger_lines, "major_road_distance", grouping="roads", metadata="Distance to road line data for this region", clear_existing=clear_existing, expand_search_area=None)
 
-		self.save()
+	def compute_protected_areas_distance(self, clear_existing=False, expand_search_area="80000 Meters"):
+		self.make_distance_raster(self.protected_areas, "protected_distance", grouping="protected_areas", metadata="Distance to PAD-US data", clear_existing=clear_existing, expand_search_area=expand_search_area)
 
-	def compute_major_road_distance(self, force=False):
-		if self.road_distance and not force:  # if we already have a raster and we're not trying to regenerate it
-			return
+	def make_distance_raster(self, features, name, grouping, metadata, clear_existing=False, expand_search_area=None):
 
-		self.road_distance = self.compute_raster_distance(self.tiger_lines, "major_road_distance", expand_search_area=None)
+		processing_log.info("Setting up Distance Raster for {}".format(name))
 
-		self.save()
+		if clear_existing:
+			for raster in self.distance_rasters.objects.filter(grouping=grouping):
+				raster.active = False
+				raster.save()
 
-	def compute_protected_areas_distance(self, force=False, expand_search_area="80000 Meters"):
-		if self.protected_areas_distance and not force:  # if we already have a raster and we're not trying to regenerate it
-			return
+		distance_raster = DistanceRaster()
+		distance_raster.region = self
+		distance_raster.name = name
+		distance_raster.grouping = grouping
+		distance_raster.metadata = metadata
 
-		self.protected_areas_distance = self.compute_raster_distance(self.protected_areas, "protected_distance", expand_search_area=expand_search_area)
+		distance_raster.path = self._compute_raster_distance(features, distance_raster.name, expand_search_area=expand_search_area)
 
+		distance_raster.save()
 		self.save()
 
 	def compute_rivers_distance(self, clear_existing=False):
@@ -296,10 +305,18 @@ class Region(models.Model):
 
 			layer = "stream_layer"
 			arcpy.MakeFeatureLayer_management(clipped_features, layer, "TotDASqKM >= {}".format(upstream_area))
-			temp_features = generate_gdb_filename("temp_streams", scratch=True)
-			arcpy.CopyFeatures_management(layer, temp_features)
 			try:
-				new_raster.path = self.compute_raster_distance(temp_features, new_raster.name,)
+				temp_features = generate_gdb_filename("temp_streams", scratch=True)
+
+				try:
+					self.check_feature_count(layer)
+				except ValueError:
+					processing_log.debug("Skipping making stream raster - no features in selection")
+					continue  # if we get a ValueError, it means we have no features - let's not save the distance raster then!
+
+				arcpy.CopyFeatures_management(layer, temp_features)
+
+				new_raster.path = self._compute_raster_distance(temp_features, new_raster.name, )
 			finally:
 				arcpy.Delete_management(layer)  # remove the feature layer
 
@@ -307,7 +324,13 @@ class Region(models.Model):
 
 		self.save()
 
-	def compute_raster_distance(self, from_features, variable_name, cell_size=30, expand_search_area=None):
+	def check_feature_count(self, features):
+		count = arcpy.GetCount_management(features).getOutput(0)
+		processing_log.info("Selected Features: layer has {} features".format(count))
+		if int(count) == 0:
+			raise ValueError("No features in feature class {}".format(features))
+
+	def _compute_raster_distance(self, from_features, variable_name, cell_size=30, expand_search_area=None):
 
 		arcpy.CheckOutExtension("Spatial")
 		stored_environments = gis.store_environments(["mask", "extent", "cellSize", "outputCoordinateSystem"])  # back up the existing settings for environment variables
@@ -428,14 +451,15 @@ class PolygonStatistics(models.Model):
 	def setup(self):
 		self.duplicate_layer()  # copy the parcels out so that we can keep a fresh copy for reprocessing still
 		if RUN_GEOPROCESSING:
-			self.compute_distance_to_floodplain()
-			self.compute_distance_to_roads()
+			#self.compute_distance_to_floodplain()
+			#self.compute_distance_to_roads()
+			self.compute_land_cover()
 			self.compute_centroid_elevation()
 			self.compute_slope_and_elevation()
 			self.compute_centroid_distances()
 			self.compute_distance_rasters()
-			self.mark_protected()
-			self.compute_distance_to_protected_areas()
+			# self.mark_protected() #  Commented out because not useful
+			#self.compute_distance_to_protected_areas()
 		else:
 			geoprocessing_log.warning("Skipping Geoprocessing for parcels because RUN_GEOPROCESSING is False")
 		self.save()
@@ -471,13 +495,15 @@ class PolygonStatistics(models.Model):
 		else:
 			return self.id_field
 
-	def zonal_min_max_mean(self, raster, name):
+	def zonal_statistics(self, raster, name, statistics_type="MIN_MAX_MEAN", fields=("MIN", "MAX", "MEAN")):
 		"""
 			Extracts zonal statistics from a raster, and joins the min, max, and mean back to the parcels layer.
 			Given a raster and a name, fields will be named mean_{name}, min_{name}, and max_{name}
 		:param raster: An ArcGIS-compatible raster path
 		:param name: The name to suffix fields with
-		:return:
+		:param statistics_type: The statistics that zonal stats should generate
+		:param fields: A tuple of the fields that we should pull out and rename (as stat_{field}_{name}) when we join it back
+		:return: list of attribute names appended to the layer
 		"""
 		self.check_values()
 
@@ -506,21 +532,21 @@ class PolygonStatistics(models.Model):
 			zone_layer = self.layer
 			value_field = self.id_field
 
-		arcpy.sa.ZonalStatisticsAsTable(zone_layer, value_field, raster, zonal_table, statistics_type="MIN_MAX_MEAN")
+		processing_log.debug("Running Zonal Stats")
+		arcpy.sa.ZonalStatisticsAsTable(zone_layer, value_field, raster, zonal_table, statistics_type=statistics_type)
 
 		if not ZONAL_STATS_BUG:  # doing this here because we need to run zonal stats first to get this
 			join_field = self.get_join_field(zonal_table)
 
+		attributes = []
 		try:
 			geoprocessing_log.info("Joining {0:s} Zone Statistics to Parcels".format(name))
-			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MEAN", rename_attribute="stat_mean_{0:s}".format(name))
 
-			geoprocessing_log.debug("Joining min")
-			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MIN", rename_attribute="stat_min_{0:s}".format(name))
-
-			geoprocessing_log.debug("Joining_max")
-			gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, "MAX", rename_attribute="stat_max_{0:s}".format(name))
-
+			for stat in fields:
+				processing_log.info("Joining {}".format(stat))
+				attribute_name = "stat_{}_{}".format(stat.lower(), name)
+				gis.permanent_join(self.layer, self.id_field, zonal_table, join_field, stat, rename_attribute=attribute_name)
+				attributes.append(attribute_name)
 			geoprocessing_log.info("Done with joining data")
 		except:
 			if not DEBUG:
@@ -529,6 +555,8 @@ class PolygonStatistics(models.Model):
 				six.reraise(*sys.exc_info())
 
 		arcpy.CheckInExtension("Spatial")
+
+		return attributes
 
 	def rescale(self, field, offset_value):
 		"""
@@ -553,11 +581,53 @@ class PolygonStatistics(models.Model):
 		analysis = self.get_analysis_object()
 		common.mark_polygons(self.layer, analysis.region.protected_areas, "stat_is_protected")
 
+	def compute_land_cover(self):
+
+		analysis = self.get_analysis_object()
+		processing_log.info("Computing land cover values")
+		attributes = self.zonal_statistics(analysis.region.land_cover, "land_cover", "MAJORITY", ("MAJORITY",))
+		attributes += self.zonal_statistics(analysis.region.land_cover, "land_cover", "MINORITY", ("MINORITY",))
+
+		for attribute in attributes:
+			self.remap_historic_land_cover(field=attribute)
+
+	def remap_historic_land_cover(self, field):
+		"""
+			Switches the arcpy layer field full of categorical IDs to the corresponding values for historical land cover
+
+		:param field: the field in this object's "layer" to remap
+		:return:
+		"""
+		land_cover = {}
+		for lc in HISTORIC_LAND_COVER_CHOICES:  # make a dict we can use to look things up in
+			land_cover[lc[0]] = lc[1]
+
+		temp_field_name = "stat_temp_copy"
+		arcpy.AddField_management
+
+		# TODO: This might not work - zonal stats might make the field numeric even though we're doing a categorical measure, so we wouldn't be able to update in place
+		updater = arcpy.UpdateCursor(self.layer, fields=field)
+		for row in updater:
+			row.setValue(field, land_cover[row.getValue(field)])  # switch the number to the text version so it's categorical -
+			updater.updateRow(row)
+
+
+	def copy_field(self, layer, field_from, field_to):
+		fields = arcpy.ListFields(layer)
+
+		source_field = None
+		for field in fields:
+			if field.name == field_from:
+				source_field = field
+		else:
+			raise ValueError("field_from {} is not available on layer {}".format(field_from, layer))
+
+
 	def compute_slope_and_elevation(self):
 
 		analysis = self.get_analysis_object()
-		self.zonal_min_max_mean(analysis.region.dem, "elevation")
-		self.zonal_min_max_mean(analysis.region.slope, "slope")
+		self.zonal_statistics(analysis.region.dem, "elevation")
+		self.zonal_statistics(analysis.region.slope, "slope")
 
 	def compute_centroid_elevation(self):
 
@@ -608,7 +678,7 @@ class PolygonStatistics(models.Model):
 
 		for distance_raster in analysis.region.distance_rasters.all():
 			processing_log.info("Getting Min/Max/Mean distance to {}".format(distance_raster.name))
-			self.zonal_min_max_mean(distance_raster, distance_raster.name)
+			self.zonal_statistics(distance_raster.path, distance_raster.name)
 
 	def compute_distance_to_floodplain(self):
 
@@ -617,7 +687,7 @@ class PolygonStatistics(models.Model):
 
 		processing_log.info("Getting Distance To Floodplain")
 
-		self.zonal_min_max_mean(analysis.region.floodplain_distance, "distance_to_floodplain")
+		self.zonal_statistics(analysis.region.floodplain_distance, "distance_to_floodplain")
 
 	def compute_distance_to_roads(self):
 		self.check_values()
@@ -625,7 +695,7 @@ class PolygonStatistics(models.Model):
 
 		processing_log.info("Getting Distance To Roads")
 
-		self.zonal_min_max_mean(analysis.region.road_distance, "road_distance")
+		self.zonal_statistics(analysis.region.road_distance, "road_distance")
 
 	def compute_distance_to_protected_areas(self):
 		self.check_values()
@@ -633,7 +703,7 @@ class PolygonStatistics(models.Model):
 
 		processing_log.info("Getting Distance To Protected Areas")
 
-		self.zonal_min_max_mean(analysis.region.protected_areas_distance, "protected_distance")
+		self.zonal_statistics(analysis.region.protected_areas_distance, "protected_distance")
 
 	def as_geojson(self):
 		geodatabase, layer_name = os.path.split(self.layer)
@@ -869,36 +939,42 @@ class RelocationStatistics(Location):
 	# TODO: these attributes might get moved up to PolygonStatistics at some point along with a function to extract them from the layer
 	stat_centroid_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_centroid_distance_to_original_boundary = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_min_distance_to_floodplain = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_max_distance_to_floodplain = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_mean_distance_to_floodplain = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	#stat_min_distance_to_floodplain = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	#stat_max_distance_to_floodplain = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	#stat_mean_distance_to_floodplain = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_min_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_max_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_mean_elevation = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_min_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_max_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 	stat_mean_slope = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_min_road_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_max_road_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_mean_road_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_is_protected = models.IntegerField(null=True, blank=True)
-	stat_min_protected_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_max_protected_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
-	stat_mean_protected_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	#stat_min_road_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	#stat_max_road_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	#stat_mean_road_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	#stat_is_protected = models.IntegerField(null=True, blank=True)
+	#stat_min_protected_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	#stat_max_protected_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
+	#stat_mean_protected_distance = models.DecimalField(null=True, blank=True, decimal_places=4, max_digits=16)
 
 	active = models.BooleanField(default=True)  # flag to indicate whether it can be used in an analysis
 
 	static_folder = "relocation_towns"
 
 	def get_analysis_object(self):
-		return self.town
+		try:
+			return self.town_before
+		except:
+			return self.town_moved
 
 	def read_boundary_info(self):
 		"""
 			Takes the processed data off of the boundary polygon and reads it back in to the attributes
 		"""
 
-		for raster in self.get_analysis_object().region.distance_rasters:
+		for mmm in self.min_max_means.all():
+			mmm.delete()  # delete the existing min-max-means - we're going to recreate them now
+
+		for raster in self.get_analysis_object().region.distance_rasters.all():
 			min_max_mean = MinMaxMean()
 			min_max_mean.relocation_statistic = self
 			min_max_mean.raster = raster
@@ -915,7 +991,7 @@ class RelocationStatistics(Location):
 		common_fields = list(set(read_fields).intersection(layer_fields))  # gets rid of any fields that won't be in the data table
 		for field in read_fields:
 			if field not in layer_fields:
-				processing_log.warning("Field {0:s} is not available on the polygon for reading - probably a misspelling. Check the field name.".format(field))
+				processing_log.warning("Field {} is not available on the polygon {} for reading - probably a misspelling. Check the field name.".format(field, self.spatial_data.layer))
 
 		polygon_data = arcpy.SearchCursor(self.spatial_data.layer)
 		for record in polygon_data:  # there will only be one
@@ -923,7 +999,8 @@ class RelocationStatistics(Location):
 				processing_log.info("Reading {0:s}".format(field))
 				setattr(self, field, record.getValue(field))  # get the value for the field from the spatial data and set the attribute here
 
-			for data in self.min_max_means:
+			for data in self.min_max_means.all():
+				processing_log.info("Reading data for min_max_mean {}".format(data.raster.name))
 				min_field = "stat_min_{}".format(data.raster.name)
 				max_field = "stat_max_{}".format(data.raster.name)
 				mean_field = "stat_mean_{}".format(data.raster.name)
@@ -1007,9 +1084,12 @@ class RelocatedTown(Analysis):
 		self.region = region
 		self.setup()
 
+
 		if make_boundaries_from_structures:
-			before_poly = self._make_boundary(before, buffer_distance)
-			after_poly = self._make_boundary(after, buffer_distance)
+			self.before_structures = before
+			self.moved_structures = after
+			before_poly = self._make_boundary(before, buffer_distance, "before")
+			after_poly = self._make_boundary(after, buffer_distance, "moved")
 		else:
 			before_poly = before
 			after_poly = after
@@ -1034,20 +1114,43 @@ class RelocatedTown(Analysis):
 		"""
 		self.mark_final_parcels()
 
+		# scale the min max mean objects!
+		for min_max_mean in self.before_location.min_max_means.all():
+			for metric in ("min", "max", "mean"):
+				scale_field = "stat_{}_{}".format(metric, min_max_mean.raster.name)
+				value = getattr(min_max_mean, metric)
+				try:
+					self.rescale(scale_field, value)
+				except ValueError:
+					continue
+
 		for field in get_field_names(self.before_location):
 			if field.startswith("stat_") and field not in no_rescale:  # if it's a statistics field and we're supposed to rescale it
 				value = getattr(self.before_location, field)
-				if value is None:
-					processing_log.warning("Value for rescaling field {0:s} is None - skipping rescale".format(field))
+				try:
+					self.rescale(field, value)
+				except ValueError:
 					continue
 
-				processing_log.info("Rescaling field {0:s} with value {1:s}".format(field, str(value)))
-				self.parcels.rescale(field, value)  # get the value for the
+	def rescale(self, field, value):
+		"""
+			Given a field, it performs the rescaling of that field on the parcels data with the provided value.
+			If the value is None, it raises ValueError instead
+		:param field:
+		:param value:
+		:return:
+		"""
+		if value is None:
+			processing_log.warning("Value for rescaling field {0:s} is None - skipping rescale".format(field))
+			raise ValueError("value can't be None - skipping!")
+
+		processing_log.info("Rescaling field {0:s} with value {1:s}".format(field, str(value)))
+		self.parcels.rescale(field, value)  # get the value for the
 
 	def get_location(self):
 		return self.before_location
 
-	def _make_boundary(self, features, buffer_distance, k=15):
+	def _make_boundary(self, features, buffer_distance, name_suffix=None):
 		"""
 			generates the boundary for an individual set of structures using a buffered convex hull.
 		:param features:
@@ -1066,7 +1169,7 @@ class RelocatedTown(Analysis):
 				if DEBUG:
 					six.reraise(*sys.exc_info())
 
-			final_layer = generate_gdb_filename("{0:s}_boundary".format(self.name), gdb=self.workspace,)
+			final_layer = generate_gdb_filename("{}_boundary_{}".format(self.name, name_suffix), gdb=self.workspace,)
 			arcpy.Buffer_analysis(new_layer, final_layer, buffer_distance)
 		finally:  # clean up layers
 			try:
@@ -1207,7 +1310,7 @@ class ProtectedAreasConstraint(Constraint):
 
 
 class LandCoverChoice(models.Model):
-	value = models.IntegerField(choices=LAND_COVER_CHOICES, unique=True)
+	value = models.IntegerField(choices=NLCD_LAND_COVER_CHOICES, unique=True)
 
 	def __str__(self):
 		return self.value
@@ -1222,13 +1325,13 @@ class LandCoverConstraint(Constraint):
 
 	def run(self):
 		processing_log.info("Running Land Use Constraint")
-		self.polygon_layer = land_use.land_use(self.suitability_analysis.location.region.nlcd,
-													self.suitability_analysis.location.search_area,
-													self.excluded_types.all(),
-													self.suitability_analysis.location.region.tiger_lines,
-													self.suitability_analysis.location.region.census_places,
-													self.suitability_analysis.location.region.crs_string,
-													self.suitability_analysis.workspace)
+		self.polygon_layer = land_use.land_use(self.suitability_analysis.location.region.land_cover,
+											   self.suitability_analysis.location.search_area,
+											   self.excluded_types.all(),
+											   self.suitability_analysis.location.region.tiger_lines,
+											   self.suitability_analysis.location.region.census_places,
+											   self.suitability_analysis.location.region.crs_string,
+											   self.suitability_analysis.workspace)
 
 		self.has_run = True
 		self.save()
