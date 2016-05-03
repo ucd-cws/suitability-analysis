@@ -602,26 +602,41 @@ class PolygonStatistics(models.Model):
 		for lc in HISTORIC_LAND_COVER_CHOICES:  # make a dict we can use to look things up in
 			land_cover[lc[0]] = lc[1]
 
-		temp_field_name = "stat_temp_copy"
-		arcpy.AddField_management
+		temp_field_name = "temp_field_copy"
 
-		# TODO: This might not work - zonal stats might make the field numeric even though we're doing a categorical measure, so we wouldn't be able to update in place
-		updater = arcpy.UpdateCursor(self.layer, fields=field)
-		for row in updater:
-			row.setValue(field, land_cover[row.getValue(field)])  # switch the number to the text version so it's categorical -
-			updater.updateRow(row)
+		# now we need to change the data type of the field so that we can write text values to it instead. We can't do this
+		# in place, so we copy the data to a new field, drop the old field, and recreate it with a text data type before
+		# we read the values from the temp field, pass them through our land cover mapping dict, then drop the temp field
 
+		# create the new data holding field
+		geoprocessing_log.info("Remapping historical land cover")
+		gis.copy_field_attributes_to_new_field(source_table=self.layer, current_field=field, target_table=self.layer, target_field=temp_field_name)
 
-	def copy_field(self, layer, field_from, field_to):
-		fields = arcpy.ListFields(layer)
+		try:
+			arcpy.CalculateField_management(in_table=self.layer, field=temp_field_name, expression="!{}!".format(field), expression_type="PYTHON_9.3")
 
-		source_field = None
-		for field in fields:
-			if field.name == field_from:
-				source_field = field
-		else:
-			raise ValueError("field_from {} is not available on layer {}".format(field_from, layer))
+			# drop the old field
+			arcpy.DeleteField_management(self.layer, drop_field=[field,])
 
+			# recreate the old field as a text type
+			arcpy.AddField_management(self.layer, field, field_type="TEXT")
+
+			geoprocessing_log.info("Reinterpreting historical land cover values...")
+			# TODO: This might not work - zonal stats might make the field numeric even though we're doing a categorical measure, so we wouldn't be able to update in place
+			updater = arcpy.UpdateCursor(self.layer, fields="{};{}".format(field, temp_field_name))
+			for row in updater:
+
+				try:
+					value = land_cover[row.getValue(temp_field_name)]
+				except KeyError:
+					# if we run into errors, keep the value as is. This will help if we get stopped midway and resume - processing previously processed records will work
+					value = row.getValue(temp_field_name)
+
+				row.setValue(field, value)  # switch the number to the text version so it's categorical
+				updater.updateRow(row)
+		finally:
+			# always drop the temp field so we can work better with the data later
+			arcpy.DeleteField_management(self.layer, drop_field=[temp_field_name,])
 
 	def compute_slope_and_elevation(self):
 
