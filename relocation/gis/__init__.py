@@ -17,17 +17,19 @@ from FloodMitigation import local_settings
 temp.temp_gdb = local_settings.SCRATCH_GDB
 
 
-def create_working_directories(base_folder, folder_name):
+def create_working_directories(base_folder, folder_name, delete_existing=False):
 
 	gdb_name = "layers.gdb"
 	working_directory = os.path.join(base_folder, folder_name)
 
-	if os.path.exists(working_directory):
+	if os.path.exists(working_directory) and delete_existing:
 		processing_log.warning("processing directory for project already exists - deleting!")
 		shutil.rmtree(working_directory)
 
-	os.mkdir(working_directory)
-	arcpy.CreateFileGDB_management(working_directory, gdb_name)
+	if not os.path.exists(working_directory):
+		os.mkdir(working_directory)
+		arcpy.CreateFileGDB_management(working_directory, gdb_name)
+
 	workspace = os.path.join(working_directory, gdb_name)
 
 	return working_directory, workspace

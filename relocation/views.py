@@ -11,6 +11,7 @@ def home(request):
 	return render(request, template_name, {})
 
 
+
 def polystats_viewer(request, object_type, item_id):
 	template_name = 'relocation/polystats.html'
 
@@ -20,3 +21,9 @@ def polystats_viewer(request, object_type, item_id):
 		object = models.location.objects.get(pk=item_id)
 
 	return render(request, template_name, context={'object': object, 'object_type': object_type.title()})
+
+def parcel_viewer(request, parcels_id):
+	template_name = 'relocation/parcels.html'
+	parcels = models.Parcels.objects.get(pk=parcels_id)
+	return render(request, template_name, context={'parcels': parcels})
+

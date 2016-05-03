@@ -1,10 +1,14 @@
 __author__ = 'dsx'
 
+import os
+import csv
+
 from django.core.management.base import BaseCommand, CommandError
 
-from relocation.models import SuitabilityAnalysis, Location, Region
+from relocation.models import SuitabilityAnalysis, Location, Region, RelocatedTown
 from relocation import models
 
+from FloodMitigation.settings import BASE_DIR
 
 class Command(BaseCommand):
 	"""
@@ -20,6 +24,37 @@ class Command(BaseCommand):
 
 
 def load_initial_data():
+	"""
+	regions_csv_file = os.path.join(BASE_DIR, "regions", "region_load.csv")
+
+	with open(regions_csv_file, 'r') as csv_open:
+		csv_records = csv.DictReader(csv_open)
+
+		for record in csv_records:
+			region = Region()
+			for key in record.keys():
+				record[key] = record[key].replace("{{BASE_DIR}}", BASE_DIR)  # replace the base directory in the paths
+			region.make(**record)  # pass the record in to "make" as kwargs
+	"""
+	relocation_csv_file = os.path.join(BASE_DIR, "regions", "relocated_town_load.csv")
+	with open(relocation_csv_file, 'r') as csv_open:
+		csv_records = csv.DictReader(csv_open)
+
+		for record in csv_records:
+			town = RelocatedTown()
+			region = Region.objects.get(short_name=record["region_short_name"])  # get the region object
+
+			for key in record.keys():
+				record[key] = record[key].replace("{{BASE_DIR}}", BASE_DIR)  # replace the base directory in the paths
+
+			town.relocation_setup(record["name"], record["short_name"], record["before_structures"], record["moved_structures"], region, make_boundaries_from_structures=True)
+			town.save()
+
+	return  # TODO: THIS IS TEMPORARY
+
+	# read csv in to dict reader
+	# loop through dict reader, creating objects
+
 	region = Region()
 	region.name = "Southern Illinois"
 	region.short_name = "southernillinois"
@@ -28,7 +63,7 @@ def load_initial_data():
 	region.layers = r"C:\Users\dsx.AD3\Code\FloodMitigation\regions\SouthernIllinois\layers.gdb"
 	region.dem_name = "Flood_dem_10m_albers"
 	region.slope_name = "flood_slope_degree_albers"
-	region.nlcd_name = "nlcd_2011_land_cover"
+	region.land_cover_name = "nlcd_2011_land_cover"
 	region.census_places_name = "census_places_2015"
 	region.protected_areas_name = "protected_areas_2015"
 	region.floodplain_areas_name = "IL_unprotected_floodplain_2012"

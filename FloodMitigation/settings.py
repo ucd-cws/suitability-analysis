@@ -35,46 +35,47 @@ ALLOWED_HOSTS = []
 
 # a code to use when looking up spatial references for web conversion - encodes for WGS 1984 and is accessed with arcpy.SpatialReference(REPROJECTION_ID)
 REPROJECTION_ID = 4326
+CHOSEN_FIELD = "chosen"
 
 # Application definition
 
 INSTALLED_APPS = (
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'relocation',
+	'django.contrib.admin',
+	'django.contrib.auth',
+	'django.contrib.contenttypes',
+	'django.contrib.sessions',
+	'django.contrib.messages',
+	'django.contrib.staticfiles',
+	'relocation',
 )
 
 MIDDLEWARE_CLASSES = (
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
+	'django.contrib.sessions.middleware.SessionMiddleware',
+	'django.middleware.common.CommonMiddleware',
+	'django.middleware.csrf.CsrfViewMiddleware',
+	'django.contrib.auth.middleware.AuthenticationMiddleware',
+	'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
+	'django.contrib.messages.middleware.MessageMiddleware',
+	'django.middleware.clickjacking.XFrameOptionsMiddleware',
+	'django.middleware.security.SecurityMiddleware',
 )
 
 ROOT_URLCONF = 'FloodMitigation.urls'
 
 TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
+	{
+		'BACKEND': 'django.template.backends.django.DjangoTemplates',
+		'DIRS': [],
+		'APP_DIRS': True,
+		'OPTIONS': {
+			'context_processors': [
+				'django.template.context_processors.debug',
+				'django.template.context_processors.request',
+				'django.contrib.auth.context_processors.auth',
+				'django.contrib.messages.context_processors.messages',
+			],
+		},
+	},
 ]
 
 WSGI_APPLICATION = 'FloodMitigation.wsgi.application'
@@ -84,10 +85,10 @@ WSGI_APPLICATION = 'FloodMitigation.wsgi.application'
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+	'default': {
+		'ENGINE': 'django.db.backends.sqlite3',
+		'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+	}
 }
 
 
@@ -110,43 +111,52 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-TEMPLATES = [
-        {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-            'DIRS': [],  # For those who wants to have a custom place for templates in their Django apps/projects.
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
-
-
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'simple': {
-            'format': '%(levelname)s %(message)s'
-        },
-    },
-    'handlers': {
-        'log_to_stdout': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-            },
-        },
-    'loggers': {
-        'main': {
-            'handlers': ['log_to_stdout'],
-            'level': 'DEBUG',
-            'propagate': True,
-        }
-    }
+	'version': 1,
+	'disable_existing_loggers': False,
+	'formatters': {
+		'simple': {
+			'format': '%(levelname)s %(message)s'
+		},
+	},
+	'handlers': {
+		'log_to_stdout': {
+			'level': 'DEBUG',
+			'class': 'logging.StreamHandler',
+			'formatter': 'simple',
+			},
+		'log_to_file': {
+			'level': 'DEBUG',
+			'class': 'logging.FileHandler',
+			'formatter': 'simple',
+			'filename': os.path.join(BASE_DIR, 'relocation.log'),
+			},
+		},
+	'loggers': {
+		'geoprocessing_log': {
+			'handlers': ['log_to_stdout'],
+			'level': 'DEBUG',
+			'propagate': True,
+		},
+		'processing_log': {
+			'handlers': ['log_to_stdout'],
+			'level': 'DEBUG',
+			'propagate': True,
+		},
+		'geoprocessing': {
+			'handlers': ['log_to_stdout'],
+			'level': 'DEBUG',
+			'propagate': True,
+		},
+		'main': {
+			'handlers': ['log_to_stdout'],
+			'level': 'DEBUG',
+			'propagate': True,
+		},
+		'silent_error_log': {
+			'handlers': ['log_to_file'],
+			'level': 'DEBUG',
+			'propagate': True,
+		}
+	}
 }
