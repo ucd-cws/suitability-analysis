@@ -25,3 +25,17 @@ def mark_polygons(polygons_to_mark, marking_polygons, field_name, selection_type
 			parcels.updateRow(record)
 	finally:
 		arcpy.Delete_management(marking_layer)
+
+
+def copy_field(layer, field_from, field_to):
+	fields = arcpy.ListFields(layer)
+
+	source_field = None
+	for field in fields:
+		if field.name == field_from:
+			source_field = field
+	else:
+		raise ValueError("field_from {} is not available on layer {}".format(field_from, layer))
+
+
+

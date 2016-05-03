@@ -31,14 +31,18 @@ def get_nested_object_from_string(initial_object, object_string):
 	return current_obj
 
 
-def make_output_param(params, name, displayName):
-	params.append(arcpy.Parameter(
+def make_output_param(params, name, displayName, symbology=None):
+	param = arcpy.Parameter(
 		name=name,
 		displayName=displayName,
 		datatype="DEFeatureClass",
 		parameterType="Derived",
 		direction="Output"
-	))
+	)
+	if symbology:
+		param.symbology = os.path.join(base_folder, "relocation", "tbx", symbology)
+
+	params.append(param)
 
 def make_index(params):
 	item_index = {}
@@ -50,18 +54,18 @@ def make_index(params):
 def make_load_town_params():
 
 	items = [
-		("before_structures", "Before Structures", "before_structures"),
-		("moved_structures", "Moved Structures", "moved_structures"),
-		("before_location", "Before Boundary", "before_location.boundary_polygon"),
-		("moved_location", "Moved Boundary", "moved_location.boundary_polygon"),
-		("dem", "DEM", "region.dem"),
-		("slope", "Slope", "region.slope"),
-		("land_cover", "Land Cover", "region.land_cover"),
-		("protected_areas", "Protected Areas", "region.protected_areas"),
-		("floodplain_areas", "Floodplain Areas", "region.floodplain_areas"),
-		("tiger_lines", "Tiger Lines", "region.tiger_lines"),
-		("rivers", "Rivers", "region.rivers"),
-		("parcels", "Parcels", "parcels.layer"),
+		("before_structures", "Before Structures", "before_structures", "old_structures.lyr"),
+		("moved_structures", "Moved Structures", "moved_structures", "new_structures.lyr"),
+		("before_location", "Before Boundary", "before_location.boundary_polygon", "old_boundary.lyr"),
+		("moved_location", "Moved Boundary", "moved_location.boundary_polygon", "new_boundary.lyr"),
+		("dem", "DEM", "region.dem", None),
+		("slope", "Slope", "region.slope", None),
+		("land_cover", "Land Cover", "region.land_cover", None),
+		("protected_areas", "Protected Areas", "region.protected_areas", "PAD.lyr"),
+		("floodplain_areas", "Floodplain Areas", "region.floodplain_areas", "nfhl.lyr"),
+		("tiger_lines", "Tiger Lines", "region.tiger_lines", "roads.lyr"),
+		("rivers", "Rivers", "region.rivers", "NHD.lyr"),
+		("parcels", "Parcels", "parcels.layer", "parcels.lyr"),
 	]
 
 	towns = [town.name for town in RelocatedTown.objects.all()]
@@ -91,7 +95,7 @@ def make_load_town_params():
 
 	params = [town_param, items_param]
 	for item in items:
-		make_output_param(params, item[0], item[1])
+		make_output_param(params, item[0], item[1], item[3])
 
 	return params, make_index(params), items
 
@@ -150,11 +154,6 @@ class Load_Town(object):
 				arcpy.AddMessage("Skipping item {}".format(item[1]))
 				continue
 
-			arcpy.AddMessage("Town: {}".format(str(town)))
-			arcpy.AddMessage("Object: {}".format(item[2]))
-			arcpy.AddMessage("Path: {}".format(get_nested_object_from_string(town,item[2])))
-			arcpy.AddMessage("Item Index Name: {}".format(item[0]))
-			arcpy.AddMessage("Item Index: {}".format(item_index[item[0]]))
 			try:
 				arcpy.SetParameterAsText(item_index[item[0]], get_nested_object_from_string(town,item[2]))
 			except AttributeError:
