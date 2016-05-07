@@ -1084,13 +1084,14 @@ class RelocatedTown(Analysis):
 
 	pre_move_land_cover = models.FilePathField(null=True, blank=True)
 
-	def relocation_setup(self, name, short_name, before, after, region, make_boundaries_from_structures=False, buffer_distance="100 Meters"):
+	def relocation_setup(self, name, short_name, before, after, region, make_boundaries_from_structures=False, buffer_distance="50 Meters", exclude_old_town=True):
 		"""
 			Creates the sub-location objects and attaches them here
 		:param name: Name of the city - locations will be based on this
 		:param before:
 		:param after_poly:
 		:param region: Region object that this town/region will be attached to.
+		:param exclude_old_town: when true, runs a function that erases the area of the old town from the new town polygon so that we get a clean analysis
 		:return:
 		"""
 
@@ -1101,6 +1102,8 @@ class RelocatedTown(Analysis):
 
 
 		if make_boundaries_from_structures:
+			before = self.filter_structures(before)
+			after = self.filter_structures(after)
 			self.before_structures = before
 			self.moved_structures = after
 			before_poly = self._make_boundary(before, buffer_distance, "before")
@@ -1108,6 +1111,9 @@ class RelocatedTown(Analysis):
 		else:
 			before_poly = before
 			after_poly = after
+
+		if exclude_old_town:
+			after_poly = self.exclude_old_boundary_from_new(before_poly, after_poly)
 
 		self._make_location(before_poly, "before")
 		self._make_location(after_poly, "after")
@@ -1163,7 +1169,56 @@ class RelocatedTown(Analysis):
 		self.parcels.rescale(field, value)  # get the value for the
 
 	def get_location(self):
+
 		return self.before_location
+
+	def filter_structures(self, structures, include_type="Residence_or_Business"):
+		"""
+			Not all structures should be included - the way Sasha set it up, we want to filter some structures out automatically
+		:param structures:
+		:param include_type:
+		:return:
+		"""
+
+		processing_log.info("Filtering structures to permananent, in-town structures")
+		fields = [field.name for field in arcpy.ListFields(structures)]
+
+		structures_object = common.data_file(structures)
+		structures_object.set_delimiters()  # figure out what type of workspace it's in so we can write a query for it
+
+		query_string = ""
+		if "Structure_type" in fields:
+			query_string += "{}Structure_Type{} = '{}' and ".format(structures_object.delim_open, structures_object.delim_close, include_type)
+
+		if "Town_Boundary" in fields:
+			query_string += "{}Town_Boundary{} = 'In' and ".format(structures_object.delim_open, structures_object.delim_close)
+
+		query_string = query_string[:-5]  #chop off the last five - so that regardless, we always get a good query string
+
+		layer = "structures_layer"
+		arcpy.MakeFeatureLayer_management(structures, layer, where_clause=query_string)
+		temp_layer = generate_gdb_filename("{}_filtered_structures".format(self.name), gdb=self.workspace)
+		try:
+			arcpy.CopyFeatures_management(layer, temp_layer)
+		finally:
+			arcpy.Delete_management(layer)
+
+		return temp_layer
+
+	def exclude_old_boundary_from_new(self, before, after):
+		"""
+			We have a problem of significant overlap between the old boundaries - we're mostly concerned with where they
+			started building when they moved. This function excludes anywhere within the old boundary from the new one
+		:return:
+		"""
+
+		processing_log.info("Excluding boundary of old town from new town boundary")
+		new_name = generate_gdb_filename("{}_new_boundary_with_old_excluded".format(self.name), gdb=self.workspace)
+
+		arcpy.Erase_analysis(after, before, new_name)
+
+		return new_name
+
 
 	def _make_boundary(self, features, buffer_distance, name_suffix=None):
 		"""
