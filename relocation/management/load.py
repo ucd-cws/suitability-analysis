@@ -60,7 +60,8 @@ def load_towns(town_names=None):
 
 			try:
 				town.relocation_setup(record["name"], record["short_name"], record["before_structures"],
-									  record["moved_structures"], region, make_boundaries_from_structures=True)
+									  record["moved_structures"], record["unfiltered_before_structures"],
+									  record["unfiltered_moved_structures"], region, make_boundaries_from_structures=True)
 				town.save()
 
 				town.process_for_calibration()

@@ -75,7 +75,7 @@ class geospatial_object:
 					self.temp_gdb = temp_gdb
 				else: # doesn't exist
 					if 'log' in sys.modules:
-						processing_log.info("Creating %s" % temp_gdb,True)
+						processing_log.info("Creating %s" % temp_gdb)
 					arcpy.CreateFileGDB_management(self.temp_folder,"join_temp.gdb")
 					self.temp_gdb = temp_gdb
 			except:
@@ -109,7 +109,7 @@ class geospatial_object:
 		if features is None: # use the instance's main file if the arg is none - it's not the default because eclipse was complaining about using "self" as an arg - may be possible, but haven't tested.
 			features = self.main_file
 
-		processing_log.info("Splitting features", True)
+		processing_log.info("Splitting features")
 
 		features_name = os.path.splitext(os.path.split(features)[1])[0]
 
@@ -181,7 +181,7 @@ class data_file(geospatial_object):
 
 	def set_delimiters(self):
 
-		processing_log.info("Setting delimiters",level="debug")
+		processing_log.info("Setting delimiters",)
 
 		try:
 			fc_info = arcpy.ParseTableName(self.data_location)
@@ -190,7 +190,7 @@ class data_file(geospatial_object):
 			processing_log.error("Failed to assess data format")
 			return False
 
-		processing_log.info("Type from ParseTableName = %s" % featureclass, level="debug")
+		processing_log.info("Type from ParseTableName = %s" % featureclass)
 
 		if re.match(" mdb",featureclass) is not None or re.search("\.mdb",featureclass) is not None:
 			self.delim_open = delims_open['mdb']
@@ -211,7 +211,7 @@ class data_file(geospatial_object):
 			self.delim_open = ""
 			self.delim_close = ""
 		else:
-			processing_log.warning("No field delimiters for this type of data. We can select features in gdbs, mdbs, shps, in_memory, and possibly sde files (untested)",True)
+			processing_log.warning("No field delimiters for this type of data. We can select features in gdbs, mdbs, shps, in_memory, and possibly sde files (untested)")
 			return False
 
 		return True

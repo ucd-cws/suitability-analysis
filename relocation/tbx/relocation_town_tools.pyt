@@ -54,8 +54,11 @@ def make_index(params):
 def make_load_town_params():
 
 	items = [
+		# short_name/key, name, attribute on the moved town, layer to symbolize with
 		("before_structures", "Before Structures", "before_structures", "old_structures.lyr"),
 		("moved_structures", "Moved Structures", "moved_structures", "new_structures.lyr"),
+		("unfiltered_before_structures", "Unfiltered Before Structures", "unfiltered_before_structures", "old_structures.lyr"),
+		("unfiltered_moved_structures", "Unfiltered Moved Structures", "unfiltered_moved_structures", "all_structures_incl_nonpermanent.lyr"),
 		("before_location", "Before Boundary", "before_location.boundary_polygon", "old_boundary.lyr"),
 		("moved_location", "Moved Boundary", "moved_location.boundary_polygon", "new_boundary.lyr"),
 		("dem", "DEM", "region.dem", None),
@@ -148,9 +151,10 @@ class Load_Town(object):
 		items_to_load = parameters[1].valueAsText
 		town = RelocatedTown.objects.get(name=town_name)
 		arcpy.AddMessage("Items to Load: {}".format(items_to_load))
+		items_to_load = items_to_load.split(";")
 
 		for item in items:
-			if item[1] not in items_to_load:
+			if item[1] not in items_to_load and "'{}'".format(item[1]) not in items_to_load:
 				arcpy.AddMessage("Skipping item {}".format(item[1]))
 				continue
 

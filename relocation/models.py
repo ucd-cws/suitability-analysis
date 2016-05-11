@@ -17,6 +17,7 @@ geoprocessing_log = logging.getLogger("geoprocessing_log")
 
 import arcpy
 
+from FloodMitigation import local_settings
 from FloodMitigation.local_settings import RUN_GEOPROCESSING, ZONAL_STATS_BUG
 from FloodMitigation.settings import CHOSEN_FIELD
 
@@ -295,7 +296,7 @@ class Region(models.Model):
 		clipped_features = generate_gdb_filename("clipped_rivers", scratch=True)
 		arcpy.Clip_analysis(self.rivers, self.extent_polygon, clipped_features)  # make it be only within the raster's extent before proceeding
 
-		for upstream_area in (0,1000,10000,100000, 1000000):  # run for every stream order
+		for upstream_area in (0,1000,10000,):  # run for every stream order
 			processing_log.info("Computing Distance to Streams with Upstream Area >= {}".format(upstream_area))
 			new_raster = DistanceRaster()
 			new_raster.grouping = "rivers"
@@ -1078,13 +1079,15 @@ class RelocatedTown(Analysis):
 
 	year_relocated = models.IntegerField(null=True, blank=True)
 	before_structures = models.FilePathField(null=True, blank=True)
+	unfiltered_before_structures = models.FilePathField(null=True, blank=True)
 	moved_structures = models.FilePathField(null=True, blank=True)
+	unfiltered_moved_structures = models.FilePathField(null=True, blank=True)
 	before_location = models.OneToOneField(RelocationStatistics, related_name="town_before")
 	moved_location = models.OneToOneField(RelocationStatistics, related_name="town_moved")
 
 	pre_move_land_cover = models.FilePathField(null=True, blank=True)
 
-	def relocation_setup(self, name, short_name, before, after, region, make_boundaries_from_structures=False, buffer_distance="50 Meters", exclude_old_town=True):
+	def relocation_setup(self, name, short_name, before, after, unfilt_before, unfilt_after, region, make_boundaries_from_structures=False, buffer_distance="50 Meters", exclude_old_town=local_settings.EXCLUDE_NEW_BOUNDARY_FROM_OLD):
 		"""
 			Creates the sub-location objects and attaches them here
 		:param name: Name of the city - locations will be based on this
@@ -1100,10 +1103,13 @@ class RelocatedTown(Analysis):
 		self.region = region
 		self.setup()
 
+		self.unfiltered_before_structures = unfilt_before
+		self.unfiltered_moved_structures = unfilt_after
+
+		before = self.filter_structures(before)
+		after = self.filter_structures(after)
 
 		if make_boundaries_from_structures:
-			before = self.filter_structures(before)
-			after = self.filter_structures(after)
 			self.before_structures = before
 			self.moved_structures = after
 			before_poly = self._make_boundary(before, buffer_distance, "before")
@@ -1113,7 +1119,7 @@ class RelocatedTown(Analysis):
 			after_poly = after
 
 		if exclude_old_town:
-			after_poly = self.exclude_old_boundary_from_new(before_poly, after_poly)
+			before_poly = self.exclude_new_boundary_from_old(before_poly, after_poly)
 
 		self._make_location(before_poly, "before")
 		self._make_location(after_poly, "after")
@@ -1133,6 +1139,11 @@ class RelocatedTown(Analysis):
 
 			:param no_rescale: indicates which fields should not be rescaled based on the original data
 		"""
+
+		if not RUN_GEOPROCESSING:
+			processing_log.info("Skipping calibration because RUN_GEOPROCESSING is False")
+			return
+
 		self.mark_final_parcels()
 
 		# scale the min max mean objects!
@@ -1205,7 +1216,7 @@ class RelocatedTown(Analysis):
 
 		return temp_layer
 
-	def exclude_old_boundary_from_new(self, before, after):
+	def exclude_new_boundary_from_old(self, before, after):
 		"""
 			We have a problem of significant overlap between the old boundaries - we're mostly concerned with where they
 			started building when they moved. This function excludes anywhere within the old boundary from the new one
@@ -1215,7 +1226,7 @@ class RelocatedTown(Analysis):
 		processing_log.info("Excluding boundary of old town from new town boundary")
 		new_name = generate_gdb_filename("{}_new_boundary_with_old_excluded".format(self.name), gdb=self.workspace)
 
-		arcpy.Erase_analysis(after, before, new_name)
+		arcpy.Erase_analysis(before, after, new_name)
 
 		return new_name
 
