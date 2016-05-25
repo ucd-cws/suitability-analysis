@@ -2,76 +2,16 @@
 
 {% block content %}
     <div class="row">
-        <div class="ui-widget col-md-5">
-          <label for="places">Places: </label>
-          <input id="places">
+        <div class="col-md-5">
+            <p>yoyoyoy</p>
 
         </div>
         <div class = "col-md-7">
-            <p id="p1">Select a Town</p>
-            <p id="p2">No Results Found</p>
+
         </div>
         <div id="spin_area">
 
         </div>
     </div>
-    <script>
-    var opts = {
-      lines: 9 // The number of lines to draw
-    , length: 28 // The length of each line
-    , width: 14 // The line thickness
-    , radius: 23 // The radius of the inner circle
-    , scale: 0.25 // Scales overall size of the spinner
-    , corners: 1 // Corner roundness (0..1)
-    , color: '#000' // #rgb or #rrggbb or array of colors
-    , opacity: 0.25 // Opacity of the lines
-    , rotate: 0 // The rotation offset
-    , direction: 1 // 1: clockwise, -1: counterclockwise
-    , speed: 1 // Rounds per second
-    , trail: 60 // Afterglow percentage
-    , fps: 20 // Frames per second when using setTimeout() as a fallback for CSS
-    , zIndex: 2e9 // The z-index (defaults to 2000000000)
-    , className: 'spinner' // The CSS class to assign to the spinner
-    , top: '50%' // Top position relative to parent
-    , left: '50%' // Left position relative to parent
-    , shadow: false // Whether to render a shadow
-    , hwaccel: false // Whether to use hardware acceleration
-    , position: 'absolute' // Element positioning
-    }
-    var target = document.getElementById('spin_area')
-    var spinner = new Spinner(opts);
-
-    $(function() {
-
-        $("#p1").hide();
-        $("#p2").hide();
-
-        $("#places").autocomplete({
-            source: "/api/get_places/",
-            search: function (event, ui){ //during search
-                spinner.spin(target);
-                $("#p1").hide();
-                $("#p2").hide();
-            },
-            response: function (event, ui) { //search done
-                $("#p1").show();
-                $("#p2").hide();
-                spinner.stop(target);
-                //if no results display no results
-                if (ui.content.length === 0) {
-                    $("#p1").hide();
-                    $("#p2").show();
-                }
-            },
-            select: function (event, ui) { //item selected
-                $("#p1").hide();
-            },
-            minLength: 2,
-        });
-        $()
-    });
-
-
-    </script>
 
 {% endblock %}
