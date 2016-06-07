@@ -13,6 +13,22 @@ from relocation.gis import conversion
 processing_log = logging.getLogger("processing_log")
 
 class ModelRunner(object):
+	"""
+		The ModelRunner class manages communicating with the database and running the model.
+		It has methodds that load the data in an appropriate format from the database, then shuffle the records,
+		rescale the values to be appropriate for a model, withhold records, fit a model, and retrieve feature importance.
+		It acts as a sort of glue between the model objects from scikit-learn and our datastore.
+
+		Sample workflow:
+
+		from relocation.regression import random_forests
+		model = random_forests.ModelRunner()  # create the object
+		model.load_data()  # loads all of the relocation town data to the model - this step usually takes the longest (2-5 min on dev machine)
+		model.run_and_validate()  # handles all of the necessary transformations. outputs basic validation information.
+		model.feature_importance()  # pulls information from the model vectorizer and outputs a report of feature importance to the screen
+
+		As of this writing, the ability to use this code to predict new locations is in progress
+	"""
 
 	classifier = RandomForestClassifier
 	original_data = None
@@ -40,12 +56,12 @@ class ModelRunner(object):
 		std = data.std(axis=0)  # std deviation by column
 		return (data - mean) / std
 
-	def load_data(self, load_town=None, randomize=True):
+	def load_data(self, load_towns=None, randomize=True, exclude_fields=()):
 
 		data_records = []
 
 		for town in RelocatedTown.objects.all():
-			if load_town and load_town != town.name:
+			if load_towns and town.name not in load_towns:
 				continue
 
 			processing_log.info("Loading town {0:s}".format(town.name))
@@ -79,28 +95,6 @@ class ModelRunner(object):
 		self.original_data = spliced_feature_data
 		self._targets = chosen_data
 		self._data = self.scale_center(self.original_data)  # remove the mean and divide by SD to give them all same scale
-
-	"""
-	def vectorize_split_and_save(self, records):
-		self._vectorizer = DictVectorizer()
-
-		trash = self._vectorizer.fit_transform(records)  # don't need it, but need to call fit_transform to make get_feature_names work
-
-		chosen_index = self._vectorizer.get_feature_names().index(self.chosen_field)
-		feature_length = len(self._vectorizer.get_feature_names())
-		feature_indices = list(range(0, chosen_index)) + list(range(chosen_index, feature_length))
-
-		self._vectorizer.restrict(feature_indices, indices=True)
-		feature_data = self._vectorizer.fit_transform(records).toarray()
-		self.fields = self._vectorizer.get_feature_names()
-
-		self._vectorizer.restrict([chosen_index,], indices=True)
-		chosen_data = self._vectorizer.fit_transform(records).toarray()
-
-		self.original_data = feature_data
-		self._targets = chosen_data
-		self._data = self.scale_center(self.original_data)  # remove the mean and divide by SD to give them all same scale
-	"""
 
 	def withhold_and_fit_model(self, withhold=.1):
 

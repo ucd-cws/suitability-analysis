@@ -50,12 +50,12 @@ def convert_to_temp_csv(features):
 	return filepath
 
 
-def features_to_dicts(features, chosen_field, none_to=0):
+def features_to_dicts(features, chosen_field, none_to=0, exclude_fields=()):
 	fields = arcpy.ListFields(features)  # get the fields in the feature class
 
 	fields_to_include = [chosen_field]
 	for field in fields:  # get all of the fields that start with "stat"
-		if field.name.startswith("stat_"):
+		if field.name.startswith("stat_") and field.name not in exclude_fields:
 			fields_to_include.append(field.name)
 
 	all_feature_data = []

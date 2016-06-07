@@ -80,6 +80,29 @@ HISTORIC_LAND_COVER_CHOICES = (  # used for remapping the numbers to categorical
 	(17, "Perennial_Ice_Snow"),
 )
 
+CURRENT_TO_HISTORIC_LAND_USE_MAP = {
+	"11 - Open Water": "Water",
+	"12 - Perennial Ice/Snow": "Perennial_Ice_Snow",
+	"21 - Developed, Open Space": "Developed",
+	"22 - Developed, Low Intensity": "Developed",
+	"23 - Developed, Medium Intensity ": "Developed",
+	"24 - Developed, High Intensity ": "Developed",
+	"31 - Barren Land (Rock/Sand/Clay)": "Developed",
+	"41 - Deciduous Forest": "Deciduous_Forest",
+	"42 - Evergreen Forest": "Evergreen_Forest",
+	"43 - Mixed Forest": "Mixed_Forest",
+	"51 - Dwarf Scrub": "Shrubland",
+	"52 - Shrub/Scrub": "Shrubland",
+	"71 - Grassland/Herbaceous": "Grassland",
+	"72 - Sedge/Herbaceous": "Herbaceous_Wetland",
+	"73 - Lichens": "Barren",
+	"74 - Moss": "Barren",
+	"81 - Pasture/Hay": "Hay_Pasture_land",
+	"82 - Cultivated Crops": "Cultivated_Cropland",
+	"90 - Woody Wetlands": "Woody_Wetland",
+	"95 - Emergent Herbaceous Wetlands": "Herbaceous_Wetland",
+}
+
 
 def get_field_names(read_object):
 	"""
@@ -219,10 +242,10 @@ class Region(models.Model):
 
 			self.save()
 
-	def _fix_parcels(self, side_length=142):
+	def _fix_parcels(self, side_length=local_settings.PARCEL_HEXAGON_SIDE_LENGTH):
 		"""
 			Called when parcels layer isn't defined - generates a hexagonal mesh coveriung the region, based on the region's extent_polygon property
-			default side length value comes from monroe parcels - average parcel area is 53k m2. side length of hexagon with that area is 142
+			val.dis
 		:return:
 		"""
 
@@ -454,7 +477,8 @@ class PolygonStatistics(models.Model):
 		if RUN_GEOPROCESSING:
 			#self.compute_distance_to_floodplain()
 			#self.compute_distance_to_roads()
-			self.compute_land_cover()
+			if local_settings.MODEL_LAND_USE:
+				self.compute_land_cover()
 			self.compute_centroid_elevation()
 			self.compute_slope_and_elevation()
 			self.compute_centroid_distances()
@@ -496,7 +520,7 @@ class PolygonStatistics(models.Model):
 		else:
 			return self.id_field
 
-	def zonal_statistics(self, raster, name, statistics_type="MIN_MAX_MEAN", fields=("MIN", "MAX", "MEAN")):
+	def zonal_statistics(self, raster, name, statistics_type="MIN_MAX_MEAN", fields=local_settings.MIN_MAX_MEAN_JOIN):
 		"""
 			Extracts zonal statistics from a raster, and joins the min, max, and mean back to the parcels layer.
 			Given a raster and a name, fields will be named mean_{name}, min_{name}, and max_{name}
@@ -692,7 +716,7 @@ class PolygonStatistics(models.Model):
 
 		processing_log.info("Getting Distance Raster Distances")
 
-		for distance_raster in analysis.region.distance_rasters.all():
+		for distance_raster in analysis.region.distance_rasters.filter(active=True):
 			processing_log.info("Getting Min/Max/Mean distance to {}".format(distance_raster.name))
 			self.zonal_statistics(distance_raster.path, distance_raster.name)
 
@@ -990,7 +1014,7 @@ class RelocationStatistics(Location):
 		for mmm in self.min_max_means.all():
 			mmm.delete()  # delete the existing min-max-means - we're going to recreate them now
 
-		for raster in self.get_analysis_object().region.distance_rasters.all():
+		for raster in self.get_analysis_object().region.distance_rasters.filter(active=True):
 			min_max_mean = MinMaxMean()
 			min_max_mean.relocation_statistic = self
 			min_max_mean.raster = raster
@@ -1087,7 +1111,10 @@ class RelocatedTown(Analysis):
 
 	pre_move_land_cover = models.FilePathField(null=True, blank=True)
 
-	def relocation_setup(self, name, short_name, before, after, unfilt_before, unfilt_after, region, make_boundaries_from_structures=False, buffer_distance="50 Meters", exclude_old_town=local_settings.EXCLUDE_NEW_BOUNDARY_FROM_OLD):
+	# land use mapper is the thing that converts modern land use to pre-move land use values for comparison in the model
+	#land_use_mapper = models.CharField(default="CURRENT_TO_HISTORIC_LAND_USE_MAP", max_length=255, null=False)
+
+	def relocation_setup(self, name, short_name, before, after, unfilt_before, unfilt_after, region, make_boundaries_from_structures=False, buffer_distance="50 Meters", exclude_old_town=local_settings.EXCLUDE_OLD_BOUNDARY_FROM_NEW):
 		"""
 			Creates the sub-location objects and attaches them here
 		:param name: Name of the city - locations will be based on this
@@ -1119,7 +1146,7 @@ class RelocatedTown(Analysis):
 			after_poly = after
 
 		if exclude_old_town:
-			before_poly = self.exclude_new_boundary_from_old(before_poly, after_poly)
+			after_poly = self.exclude_old_boundary_from_new(before_poly, after_poly,)
 
 		self._make_location(before_poly, "before")
 		self._make_location(after_poly, "after")
@@ -1216,7 +1243,7 @@ class RelocatedTown(Analysis):
 
 		return temp_layer
 
-	def exclude_new_boundary_from_old(self, before, after):
+	def exclude_old_boundary_from_new(self, before, after):
 		"""
 			We have a problem of significant overlap between the old boundaries - we're mostly concerned with where they
 			started building when they moved. This function excludes anywhere within the old boundary from the new one
@@ -1226,7 +1253,7 @@ class RelocatedTown(Analysis):
 		processing_log.info("Excluding boundary of old town from new town boundary")
 		new_name = generate_gdb_filename("{}_new_boundary_with_old_excluded".format(self.name), gdb=self.workspace)
 
-		arcpy.Erase_analysis(before, after, new_name)
+		arcpy.Erase_analysis(after, before, new_name)
 
 		return new_name
 
