@@ -24,5 +24,5 @@ def get_places(request):
 
 #gets and shows relevant geoJSON file for selection
 def place_view(request, city, state):
-    obj = get_object_or_404(Place, city=city, state=" " + state) #remember to remove state after
+    obj = get_object_or_404(Place, city=city, state=state)
     return render(request, 'census_search/place_view.html', context={'object': obj})
