@@ -20,7 +20,8 @@ class Command(BaseCommand):
             p1 = Place()
             p1.key = row.getValue("OBJECTID")
             p1.city = row.getValue("cb_2014_Merge_NAME")
-            p1.state = row.getValue("FPName_STATENAME")
+            p1.state = row.getValue("FPName_STATENAME").strip()
+            p1.as_geojson()
             p1.save()
 
         self.stdout.write("Done.")

@@ -12,6 +12,7 @@ class Place(models.Model):
 
 	def as_geojson(self):
 		#create all geojson files for each city
+		self.geojson = "relocation\\static\\relocation\\geojson\\parcels\\1.geojson"
 		'''
 		geodatabase, layer_name = os.path.split(self.layer)
 		try:

@@ -15,6 +15,8 @@
         <link rel="stylesheet" href="{% static 'css/style.css' %}">
         <!-- Spin.js -->
         <script src="{% static 'js/spin.js' %}"></script>
+        {% block head %}
+        {% endblock %}
     </head>
     <body>
     <div class="page-header">
@@ -28,5 +30,12 @@
             </div>
         </div>
     </div>
+
+    <footer>
+       {% block footer %}
+       {% endblock %}
+    </footer>
+
+
 </body>
 </html>
