@@ -73,7 +73,6 @@
             },
             minLength: 2,
         });
-        $()
     });
 
     function AutoCompleteSelectHandler(event, ui)
@@ -83,14 +82,11 @@
         var parsed = selectedObj.value.split(',');
         var city = parsed[0];
         var state = parsed[1].replace(/\s/g, '');
-        console.log(parsed);
-        console.log(base_url);
 
         var url = base_url;
         url = url.replace("city_to_replace", city);
         url = url.replace("state_to_replace", state);
         //get related geojson file
-        console.log(url);
         $('#link').attr("href", url);
     }
 
