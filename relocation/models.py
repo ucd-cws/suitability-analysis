@@ -1114,7 +1114,7 @@ class RelocatedTown(Analysis):
 	# land use mapper is the thing that converts modern land use to pre-move land use values for comparison in the model
 	#land_use_mapper = models.CharField(default="CURRENT_TO_HISTORIC_LAND_USE_MAP", max_length=255, null=False)
 
-	def relocation_setup(self, name, short_name, before, after, unfilt_before, unfilt_after, region, make_boundaries_from_structures=False, buffer_distance="50 Meters", exclude_old_town=local_settings.EXCLUDE_OLD_BOUNDARY_FROM_NEW):
+	def relocation_setup(self, name, short_name, before, after, unfilt_before, unfilt_after, region, before_structures=None, after_structures=None, make_boundaries_from_structures=False, buffer_distance="50 Meters", exclude_old_town=local_settings.EXCLUDE_OLD_BOUNDARY_FROM_NEW):
 		"""
 			Creates the sub-location objects and attaches them here
 		:param name: Name of the city - locations will be based on this
@@ -1133,10 +1133,11 @@ class RelocatedTown(Analysis):
 		self.unfiltered_before_structures = unfilt_before
 		self.unfiltered_moved_structures = unfilt_after
 
-		before = self.filter_structures(before)
-		after = self.filter_structures(after)
+		if before_structures and after_structures and make_boundaries_from_structures:
 
-		if make_boundaries_from_structures:
+			before = self.filter_structures(before_structures)
+			after = self.filter_structures(after_structures)
+
 			self.before_structures = before
 			self.moved_structures = after
 			before_poly = self._make_boundary(before, buffer_distance, "before")
@@ -1144,6 +1145,9 @@ class RelocatedTown(Analysis):
 		else:
 			before_poly = before
 			after_poly = after
+
+			self.before_structures = before_structures
+			self.after_structures = after_structures
 
 		if exclude_old_town:
 			after_poly = self.exclude_old_boundary_from_new(before_poly, after_poly,)

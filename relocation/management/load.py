@@ -59,9 +59,11 @@ def load_towns(town_names=None):
 				record[key] = record[key].replace("{{BASE_DIR}}", BASE_DIR)  # replace the base directory in the paths
 
 			try:
-				town.relocation_setup(record["name"], record["short_name"], record["before_structures"],
-									  record["moved_structures"], record["unfiltered_before_structures"],
-									  record["unfiltered_moved_structures"], region, make_boundaries_from_structures=True)
+				town.relocation_setup(record["name"], record["short_name"], before=record["before_boundary"],
+									  after=record["after_boundary"],before_structures=record["before_structures"],
+									  after_structures=record["moved_structures"], unfilt_before=record["unfiltered_before_structures"],
+									  unfilt_after=record["unfiltered_moved_structures"], region=region, make_boundaries_from_structures=False,
+									  exclude_old_town=False)
 				town.save()
 
 				town.process_for_calibration()

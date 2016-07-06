@@ -1,5 +1,6 @@
 import logging
 from random import shuffle
+from statistics import mean
 
 from FloodMitigation.settings import CHOSEN_FIELD
 
@@ -68,6 +69,9 @@ class ModelRunner(object):
 			new_data = conversion.features_to_dicts(town.parcels.layer, chosen_field=self.chosen_field)
 			data_records += new_data
 
+		self._set_up_loaded_data(data_records,randomize=randomize)
+
+	def _set_up_loaded_data(self, data_records, randomize=True):
 		if randomize:
 			shuffle(data_records)  # randomize them before passing them . Works in place
 
@@ -171,14 +175,61 @@ class ModelRunner(object):
 		for value in sorted_keys:
 			processing_log.info("{}: {}".format(features_and_values[value], value))
 
-	def predict_new_dataset(self):
+	def check_town_influence(self, num_iterations=5):
+		data_records = {}
+
+		for town in RelocatedTown.objects.all():
+			processing_log.info("Loading town {0:s}".format(town.name))
+			new_data = conversion.features_to_dicts(town.parcels.layer, chosen_field=self.chosen_field)
+			data_records[town.name] = new_data
+
+		towns = list(data_records.keys())
+		for exclude_town in towns:
+			current_records = []
+
+			# compose a dataset of all towns but the loaded ones
+			for town in towns:
+				if town == exclude_town:
+					processing_log.info("Excluding town {} for run".format(exclude_town))
+					continue
+
+				current_records += data_records[town]
+
+			# set it up on the object
+			self._set_up_loaded_data(data_records=current_records, randomize=True)
+
+			percent_incorrects = []
+
+			# run a number of iterations with the model
+			for iteration in range(num_iterations):
+				processing_log.debug("iteration {}".format(iteration))
+				self.reshuffle()
+
+				self.withhold_and_fit_model(withhold=.1)
+				total_y_trues = np.count_nonzero(self.withheld_truth)
+				self.validate()
+				percent_incorrects.append(self.underpredict / total_y_trues)
+
+			processing_log.info("Mean percent incorrect (for true) when excluding {} = {}".format(exclude_town,mean(percent_incorrects)))
+			processing_log.info("Min percent incorrect (for true) when excluding {} = {}".format(exclude_town,min(percent_incorrects)))
+			processing_log.info("Max percent incorrect (for true) when excluding {} = {}".format(exclude_town,max(percent_incorrects)))
+
+	def predict_new_dataset(self, dataset):
 		"""
 		It's going to need to load up the new parcels, and make sure that it adds a blank chosen
 		field to each record (so that it can be put through the same vectorizer - it may not need this, so confirm)
 
 		then read in the records one by one, putting each one through the vectorizer, then predicting, and then setting
 		the value on the parcels at the same time.
+
+		TODO: Need to save out the scaling values from the original model to use when scaling the new dataset so that they end up
+				being on the same scale
+		TODO: predict_new_dataset should take a town and run it through here, but we need to set up functions that can set up a town
+				without complete information like the chosen site. Maybe some sort of manager class?
+		TODO: Should the model be serialized and reloaded for consistency?
 		:return:
 		"""
+
+
 
 		pass
