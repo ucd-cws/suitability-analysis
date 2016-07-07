@@ -159,7 +159,7 @@ class Region(models.Model):
 	# some of these aren't needed and they just aren't available. Available constraint validation should occur
 	# when adding a constraint
 	dem_name = models.CharField(max_length=255, )
-	dem = models.FilePathField(null=True, blank=True, editable=False)
+	_dem = models.FilePathField(null=True, blank=True, editable=False)
 	slope_name = models.CharField(max_length=255, )
 	slope = models.FilePathField(null=True, blank=True, editable=False)
 	land_cover_name = models.CharField(max_length=255, )
@@ -176,6 +176,33 @@ class Region(models.Model):
 	rivers = models.FilePathField(null=True, blank=True, editable=False)
 	parcels_name = models.CharField(max_length=255, null=True, blank=True)
 	parcels = models.FilePathField(null=True, blank=True, editable=False)
+
+	def check_path(self, value):
+		"""
+			Used in setter functions to check if the path is relative to BASE_DIR and appropriately transform it for storage
+		:param value:
+		:return:
+		"""
+		if not os.path.isabs(value):  # if it's a relative path, we assume it's relative to BASE_DIR
+			return value
+		else:  # it's absolute, but is it absolute to the right thing?
+			if BASE_DIR in value:  # if it's relative to BASE_DIR, strip that off, otherwise we'll leave it as a full path, which gets caught by the getter
+				value.replace(BASE_DIR, "")  # remove BASE_DIR, then set the value
+			return value
+
+	def get_path(self, property):
+		if os.path.isabs(property):  # if it's already a full path
+			return property  # return it
+		else:  # otherwise, it needs to be combined with BASE_DIR
+			return os.path.join(BASE_DIR, property)
+
+	@property
+	def dem(self):
+		return self.get_path(self._dem)
+
+	@dem.setter
+	def dem(self, value):
+		self._dem = self.check_path(value)
 
 	# the following items are now distance rasters
 	# floodplain_distance = models.FilePathField(null=True, blank=True, editable=True)
