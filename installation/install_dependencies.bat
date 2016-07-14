@@ -1,0 +1,9 @@
+conda install django
+conda install django-debug-toolbar
+pip install celery
+conda install arrow
+conda install GDAL
+conda install numpy
+conda install scipy
+conda install matplotlib
+conda install scikit-learn
