@@ -22,7 +22,7 @@ class RegionTest(TestCase):
 		region.census_places_name = "census_places_2015"
 		region.protected_areas_name = "protected_areas_2015"
 		region.floodplain_areas_name = "IL_unprotected_floodplain_2012"
-		region.tiger_lines_name = "tiger_roads_2011_albers"
+		region.roads_name = "tiger_roads_2011_albers"
 		region.parcels_name = "monroe_parcels"
 		region.save()
 

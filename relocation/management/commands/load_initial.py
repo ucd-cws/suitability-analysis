@@ -36,22 +36,6 @@ def load_initial_data():
 				record[key] = record[key].replace("{{BASE_DIR}}", BASE_DIR)  # replace the base directory in the paths
 			region.make(**record)  # pass the record in to "make" as kwargs
 	"""
-	relocation_csv_file = os.path.join(BASE_DIR, "regions", "relocated_town_load.csv")
-	with open(relocation_csv_file, 'r') as csv_open:
-		csv_records = csv.DictReader(csv_open)
-
-		for record in csv_records:
-			town = RelocatedTown()
-			region = Region.objects.get(short_name=record["region_short_name"])  # get the region object
-
-			for key in record.keys():
-				record[key] = record[key].replace("{{BASE_DIR}}", BASE_DIR)  # replace the base directory in the paths
-
-			town.relocation_setup(record["name"], record["short_name"], record["before_structures"], record["moved_structures"], region, make_boundaries_from_structures=True)
-			town.save()
-
-	return  # TODO: THIS IS TEMPORARY
-
 	# read csv in to dict reader
 	# loop through dict reader, creating objects
 
@@ -67,7 +51,7 @@ def load_initial_data():
 	region.census_places_name = "census_places_2015"
 	region.protected_areas_name = "protected_areas_2015"
 	region.floodplain_areas_name = "IL_unprotected_floodplain_2012"
-	region.tiger_lines_name = "tiger_roads_2011_albers"
+	region.roads_name = "tiger_roads_2011_albers"
 	region.parcels_name = "monroe_parcels"
 	region.save()
 	region.setup()
@@ -160,3 +144,22 @@ def load_initial_data():
 	second_roads_constraint.where_clause = ""  # any road and testing a blank where clause
 	second_roads_constraint.save()
 
+
+
+def relocated_town_load():
+	relocation_csv_file = os.path.join(BASE_DIR, "regions", "relocated_town_load.csv")
+	with open(relocation_csv_file, 'r') as csv_open:
+		csv_records = csv.DictReader(csv_open)
+
+		for record in csv_records:
+			town = RelocatedTown()
+			region = Region.objects.get(short_name=record["region_short_name"])  # get the region object
+
+			for key in record.keys():
+				record[key] = record[key].replace("{{BASE_DIR}}", BASE_DIR)  # replace the base directory in the paths
+
+			town.relocation_setup(record["name"], record["short_name"], record["before_structures"],
+								  record["moved_structures"], region, make_boundaries_from_structures=True)
+			town.save()
+
+	return  # TODO: THIS IS TEMPORARY

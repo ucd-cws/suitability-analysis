@@ -1,4 +1,7 @@
 import logging
+
+import csv
+
 from random import shuffle
 from statistics import mean
 
@@ -77,6 +80,17 @@ class ModelRunner(object):
 
 		self._pulled_data = data_records
 		self.vectorize_split_and_save(data_records)
+
+	def write_data_as_csv(self, path):
+
+		if not self._pulled_data or not self.fields:
+			self.load_data()
+
+		with open(path,'w') as file_handle:
+			csv_writer = csv.DictWriter(file_handle, fieldnames=self.fields + ["chosen",], lineterminator='\n',)
+			csv_writer.writeheader()
+			csv_writer.writerows(self._pulled_data)
+
 
 	def reshuffle(self):
 		shuffle(self._pulled_data)  # randomize them before passing them . Works in place

@@ -23,6 +23,13 @@ from relocation.models import RelocatedTown
 
 
 def get_nested_object_from_string(initial_object, object_string):
+	"""
+		Given a string that describes a subobject, this deconstructs it based on the periods and returns the
+		actual object that is described.
+	:param initial_object:
+	:param object_string:
+	:return:
+	"""
 	parts = object_string.split(".")
 	current_obj = initial_object
 	for part in parts:
@@ -66,7 +73,7 @@ def make_load_town_params():
 		("land_cover", "Land Cover", "region.land_cover", None),
 		("protected_areas", "Protected Areas", "region.protected_areas", "PAD.lyr"),
 		("floodplain_areas", "Floodplain Areas", "region.floodplain_areas", "nfhl.lyr"),
-		("tiger_lines", "Tiger Lines", "region.tiger_lines", "roads.lyr"),
+		("roads", "Roads", "region.roads", "roads.lyr"),
 		("rivers", "Rivers", "region.rivers", "NHD.lyr"),
 		("parcels", "Parcels", "parcels.layer", "parcels.lyr"),
 	]

@@ -24,6 +24,7 @@ from FloodMitigation.settings import CHOSEN_FIELD
 from relocation.gis.temp import generate_gdb_filename
 
 from relocation import gis
+from relocation.gis import river_side
 from relocation.gis import slope
 from relocation.gis import protected_areas
 from relocation.gis import merge
@@ -170,10 +171,11 @@ class Region(models.Model):
 	protected_areas = models.FilePathField(null=True, blank=True, editable=False)
 	floodplain_areas_name = models.CharField(max_length=255, )
 	floodplain_areas = models.FilePathField(null=True, blank=True, editable=False)
-	tiger_lines_name = models.CharField(max_length=255, )
-	tiger_lines = models.FilePathField(null=True, blank=True, editable=False)
+	roads_name = models.CharField(max_length=255, )
+	roads = models.FilePathField(null=True, blank=True, editable=False)
 	rivers_name = models.CharField(max_length=255, )
 	rivers = models.FilePathField(null=True, blank=True, editable=False)
+	_major_river = models.FilePathField(null=True, blank=True, editable=False)
 	parcels_name = models.CharField(max_length=255, null=True, blank=True)
 	parcels = models.FilePathField(null=True, blank=True, editable=False)
 
@@ -203,6 +205,14 @@ class Region(models.Model):
 	@dem.setter
 	def dem(self, value):
 		self._dem = self.check_path(value)
+
+	@property
+	def major_river(self):
+		return self.get_path(self._major_river)
+
+	@major_river.setter
+	def major_river(self, value):
+		self._major_river = self.check_path(value)
 
 	# the following items are now distance rasters
 	# floodplain_distance = models.FilePathField(null=True, blank=True, editable=True)
@@ -236,7 +246,7 @@ class Region(models.Model):
 		self.census_places = os.path.join(str(self.layers), self.census_places_name)
 		self.protected_areas = os.path.join(str(self.layers), self.protected_areas_name)
 		self.floodplain_areas = os.path.join(str(self.layers), self.floodplain_areas_name)
-		self.tiger_lines = os.path.join(str(self.layers), self.tiger_lines_name)
+		self.roads = os.path.join(str(self.layers), self.roads_name)
 		self.parcels = os.path.join(str(self.layers), self.parcels_name)
 		self.save()
 
@@ -308,7 +318,7 @@ class Region(models.Model):
 		self.make_distance_raster(self.floodplain_areas, "floodplain_distance", grouping="floodplains", metadata="distance to floodplain data", clear_existing=clear_existing, expand_search_area=expand_search_area)
 
 	def compute_major_road_distance(self, clear_existing=False):
-		self.make_distance_raster(self.tiger_lines, "major_road_distance", grouping="roads", metadata="Distance to road line data for this region", clear_existing=clear_existing, expand_search_area=None)
+		self.make_distance_raster(self.roads, "major_road_distance", grouping="roads", metadata="Distance to road line data for this region", clear_existing=clear_existing, expand_search_area=None)
 
 	def compute_protected_areas_distance(self, clear_existing=False, expand_search_area="80000 Meters"):
 		self.make_distance_raster(self.protected_areas, "protected_distance", grouping="protected_areas", metadata="Distance to PAD-US data", clear_existing=clear_existing, expand_search_area=expand_search_area)
@@ -1318,6 +1328,9 @@ class RelocatedTown(Analysis):
 
 		return final_layer
 
+	def mark_river_side(self):
+		river_side.mark_side_of_river(self.parcels.layer, self.before_location.boundary_polygon, self.before_location.region.major_river)
+
 	def mark_final_parcels(self, selection_type="INTERSECT"):
 		"""
 			Takes the parcels layer for the analysis object and adds a field that it uses to mark the parcels as chosen or not chosen
@@ -1467,7 +1480,7 @@ class LandCoverConstraint(Constraint):
 		self.polygon_layer = land_use.land_use(self.suitability_analysis.location.region.land_cover,
 											   self.suitability_analysis.location.search_area,
 											   self.excluded_types.all(),
-											   self.suitability_analysis.location.region.tiger_lines,
+											   self.suitability_analysis.location.region.roads,
 											   self.suitability_analysis.location.region.census_places,
 											   self.suitability_analysis.location.region.crs_string,
 											   self.suitability_analysis.workspace)
@@ -1513,7 +1526,7 @@ class RoadClassDistanceConstraint(Constraint):
 	where_clause = models.TextField(default="")
 
 	def run(self):
-		roads.road_distance(self.constraint_manager.suitability_analysis.location.region.tiger_lines, self.max_distance, self.where_clause, self.constraint_manager.suitability_analysis.workspace)
+		roads.road_distance(self.constraint_manager.suitability_analysis.location.region.roads, self.max_distance, self.where_clause, self.constraint_manager.suitability_analysis.workspace)
 
 
 class ScoredConstraint(Constraint):
