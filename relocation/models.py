@@ -175,7 +175,7 @@ class Region(models.Model):
 	roads = models.FilePathField(null=True, blank=True, editable=False)
 	rivers_name = models.CharField(max_length=255, )
 	rivers = models.FilePathField(null=True, blank=True, editable=False)
-	_major_river = models.FilePathField(null=True, blank=True, editable=False)
+	_barrier_river = models.FilePathField(null=True, blank=True, editable=False)
 	parcels_name = models.CharField(max_length=255, null=True, blank=True)
 	parcels = models.FilePathField(null=True, blank=True, editable=False)
 
@@ -207,12 +207,12 @@ class Region(models.Model):
 		self._dem = self.check_path(value)
 
 	@property
-	def major_river(self):
-		return self.get_path(self._major_river)
+	def barrier_river(self):
+		return self.get_path(self._barrier_river)
 
-	@major_river.setter
-	def major_river(self, value):
-		self._major_river = self.check_path(value)
+	@barrier_river.setter
+	def barrier_river(self, value):
+		self._barrier_river = self.check_path(value)
 
 	# the following items are now distance rasters
 	# floodplain_distance = models.FilePathField(null=True, blank=True, editable=True)
@@ -1329,7 +1329,7 @@ class RelocatedTown(Analysis):
 		return final_layer
 
 	def mark_river_side(self):
-		river_side.mark_side_of_river(self.parcels.layer, self.before_location.boundary_polygon, self.before_location.region.major_river)
+		river_side.mark_side_of_river(self.parcels.layer, self.before_location.boundary_polygon, self.before_location.region.barrier_river)
 
 	def mark_final_parcels(self, selection_type="INTERSECT"):
 		"""

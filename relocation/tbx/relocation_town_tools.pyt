@@ -75,6 +75,7 @@ def make_load_town_params():
 		("floodplain_areas", "Floodplain Areas", "region.floodplain_areas", "nfhl.lyr"),
 		("roads", "Roads", "region.roads", "roads.lyr"),
 		("rivers", "Rivers", "region.rivers", "NHD.lyr"),
+		("barrier_river", "Barrier River", "region.barrier_river", "major_river.lyr"),
 		("parcels", "Parcels", "parcels.layer", "parcels.lyr"),
 	]
 
