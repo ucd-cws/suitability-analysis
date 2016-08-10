@@ -1,4 +1,5 @@
 Installation Instructions
+=======================================================
 
 1. Install ArcGis Pro, log in, and upgrade to version 1.3
 

@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ScrivenerProject Template="No" Version="1.5" Creator="SCRWIN-1.9.5.0" Device="CWS-SILVERFORK" Modified="2016-07-28 11:51:55 -0700" ModID="A30A25FC-2C82-4ACE-BF1A-BC117A270962">
+    <Binder>
+        <BinderItem ID="0" UUID="5D3F6741-24AB-4F76-BE76-BFECF6CF6E69" Created="2016-07-19 10:12:51 -0700" Modified="2016-07-19 10:12:51 -0700" Type="DraftFolder">
+            <Title>Draft</Title>
+            <MetaData>
+                <IncludeInCompile>Yes</IncludeInCompile>
+            </MetaData>
+            <Children>
+                <BinderItem ID="4" UUID="310F900E-BB05-40C5-B934-F04974DCB43A" Created="2016-07-19 10:15:33 -0700" Modified="2016-07-19 10:15:48 -0700" Type="Folder">
+                    <Title>Data Sources and Setup</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                    <Children>
+                        <BinderItem ID="12" UUID="84BB855D-B25A-424F-8308-6A89A2BC93B8" Created="2016-07-19 10:17:13 -0700" Modified="2016-07-19 10:17:16 -0700" Type="Text">
+                            <Title>Sasha info</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="13" UUID="6CF36495-8671-4073-B074-DD7EDAC94BB0" Created="2016-07-19 10:17:19 -0700" Modified="2016-07-19 10:17:29 -0700" Type="Text">
+                            <Title>Towns</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="17" UUID="D7F7C30D-F195-48C2-A7C8-76209B3A8025" Created="2016-07-19 10:18:17 -0700" Modified="2016-07-19 10:18:24 -0700" Type="Text">
+                            <Title>Hexagons and Cell Size</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="15" UUID="2A777920-0786-4EEB-8662-CC3C322E0FB1" Created="2016-07-19 10:17:43 -0700" Modified="2016-07-19 10:17:47 -0700" Type="Folder">
+                            <Title>Floodplain Digitizing</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="16" UUID="A760482B-882C-4568-83A8-6FC2BFCBF992" Created="2016-07-19 10:17:55 -0700" Modified="2016-07-19 10:17:58 -0700" Type="Folder">
+                            <Title>Roads Digitizing</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                    </Children>
+                </BinderItem>
+                <BinderItem ID="19" UUID="DF7E6D49-D47C-4596-AF62-05EA8736FB28" Created="2016-07-19 10:18:50 -0700" Modified="2016-07-19 10:18:52 -0700" Type="Folder">
+                    <Title>Variables</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                    <Children>
+                        <BinderItem ID="20" UUID="247B25E2-F243-4497-B664-42487B845171" Created="2016-07-19 10:18:55 -0700" Modified="2016-07-19 10:18:58 -0700" Type="Text">
+                            <Title>Min Max Mean</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                    </Children>
+                </BinderItem>
+                <BinderItem ID="5" UUID="773B88AE-3853-458E-85A9-D4F54BDBCFC3" Created="2016-07-19 10:15:50 -0700" Modified="2016-07-19 10:16:03 -0700" Type="Folder">
+                    <Title>Code Structure</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                    <Children>
+                        <BinderItem ID="9" UUID="C4758860-43F7-4C8F-ACA1-33B16C82A7FD" Created="2016-07-19 10:16:30 -0700" Modified="2016-07-19 10:16:33 -0700" Type="Text">
+                            <Title>Django</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="10" UUID="435AF270-7A88-40E5-A9A1-7608D145C370" Created="2016-07-19 10:16:37 -0700" Modified="2016-07-19 10:16:47 -0700" Type="Text">
+                            <Title>Load data in raw for preprocessing</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                    </Children>
+                </BinderItem>
+                <BinderItem ID="6" UUID="45590725-275C-41F0-A8C3-E32A6DF0D7DB" Created="2016-07-19 10:16:07 -0700" Modified="2016-07-19 10:16:09 -0700" Type="Folder">
+                    <Title>Model Methods</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                    <Children>
+                        <BinderItem ID="8" UUID="D21BD531-DA7E-49C3-AF03-3F8CF124EB0A" Created="2016-07-19 10:16:21 -0700" Modified="2016-07-19 10:17:11 -0700" Type="Text">
+                            <Title>Random Forests in Sklearn</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="11" UUID="EA8811B4-8FEB-4F1E-8380-90D6FB3FC333" Created="2016-07-19 10:16:53 -0700" Modified="2016-07-19 10:16:58 -0700" Type="Text">
+                            <Title>Model Processing</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                    </Children>
+                </BinderItem>
+                <BinderItem ID="7" UUID="ADA23CB9-0287-4973-A6F5-80285BAE50AF" Created="2016-07-19 10:16:12 -0700" Modified="2016-07-19 10:16:14 -0700" Type="Folder">
+                    <Title>Model Results</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+            </Children>
+        </BinderItem>
+        <BinderItem ID="1" UUID="7EE18A61-EEF3-4155-9352-733D397613C6" Created="2016-07-19 10:12:51 -0700" Modified="2016-07-19 10:12:51 -0700" Type="ResearchFolder">
+            <Title>Research</Title>
+            <MetaData>
+                <IncludeInCompile>Yes</IncludeInCompile>
+            </MetaData>
+        </BinderItem>
+        <BinderItem ID="2" UUID="D2993627-F288-4031-BD72-1051093379D3" Created="2016-07-19 10:12:51 -0700" Modified="2016-07-19 10:12:51 -0700" Type="TrashFolder">
+            <Title>Trash</Title>
+            <MetaData>
+                <IncludeInCompile>Yes</IncludeInCompile>
+            </MetaData>
+            <Children>
+                <BinderItem ID="18" UUID="93BC8F3B-B363-4BDF-B3EA-ED8B3D0CFD7A" Created="2016-07-19 10:18:44 -0700" Modified="2016-07-19 10:18:44 -0700" Type="Text">
+                    <Title></Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+                <BinderItem ID="14" UUID="AC5B0B2A-586B-4A36-89B4-AEBB838DC859" Created="2016-07-19 10:17:31 -0700" Modified="2016-07-19 10:17:31 -0700" Type="Text">
+                    <Title></Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+                <BinderItem ID="3" UUID="52824E01-6725-4658-9C00-8307883784C1" Created="2016-07-19 10:12:51 -0700" Modified="2016-07-19 10:12:51 -0700" Type="Text">
+                    <Title></Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+            </Children>
+        </BinderItem>
+    </Binder>
+    <LabelSettings>
+        <Title>Label</Title>
+        <DefaultLabelID>-1</DefaultLabelID>
+        <Labels>
+            <Label ID="-1">No Label</Label>
+            <Label ID="0" Color="0.752941 0.752941 1.000000">Concept</Label>
+            <Label ID="1" Color="1.000000 0.752941 0.752941">Chapter</Label>
+        </Labels>
+    </LabelSettings>
+    <StatusSettings>
+        <Title>Status</Title>
+        <DefaultStatusID>-1</DefaultStatusID>
+        <StatusItems>
+            <Status ID="-1">No Status</Status>
+            <Status ID="0">N/A</Status>
+            <Status ID="1">To Do</Status>
+            <Status ID="2">First Draft</Status>
+            <Status ID="3">Revised Draft</Status>
+            <Status ID="4">Final Draft</Status>
+            <Status ID="5">Done</Status>
+        </StatusItems>
+    </StatusSettings>
+    <ProjectTargets>
+        <DraftTarget Type="Words" CountIncludedOnly="No" CurrentCompileGroupOnly="No">0</DraftTarget>
+        <SessionTarget Type="Words" CountDraftOnly="No" AllowNegatives="No" ResetType="Midnight" DeterminedFromDeadline="No" CanWriteOnDeadlineDate="No" WritingDays="">0</SessionTarget>
+        <PreviousSession Words="0" Characters="0" Date="2016-07-28 11:34:49 -0700"/>
+    </ProjectTargets>
+    <Collections>
+        <Collection Type="Binder" ID="6ABBFD11-8D79-4B81-A664-9C59D4D76300" Color="0.901961 0.917647 0.933333">
+            <Title>Binder</Title>
+        </Collection>
+        <Collection Type="RecentSearch" ID="E5B2B981-DFA8-456C-873A-A269F7A31A7D" Color="0.901961 0.901961 0.980392">
+            <Title>Search Results</Title>
+            <SearchSettings Operator="Exact" Type="All" Scope="All" CompileSetting="All" CaseSensitive="No"></SearchSettings>
+        </Collection>
+    </Collections>
+    <PrintSettings PaperType="Letter" LeftMargin="18" RightMargin="18" TopMargin="11.9906" BottomMargin="11.9906" Orientation="Portrait" Collates="No" ReverseOrder="No"/>
+</ScrivenerProject>

@@ -125,7 +125,7 @@ def permanent_join(target_table, target_attribute, source_table, source_attribut
 	else:
 		new_name = rename_attribute
 
-	copy_field_attributes_to_new_field(source_table=source_table, current_field=source_attribute, target_table=target_table, target_field=new_name)
+	copy_field_attributes_to_new_field(source_table=source_table, current_field=attribute_to_attach, target_table=target_table, target_field=new_name)
 
 	join_data = read_field_to_dict(source_table, attribute_to_attach, source_attribute)  # look up these values so we can easily just use one cursor at a time - first use the search cursor, then the update cursor on the new table
 

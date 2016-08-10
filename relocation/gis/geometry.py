@@ -255,3 +255,111 @@ def centroid_feature_to_point(feature,as_file=False, id_field=None):
 	del curs
 
 	return points
+
+
+def fast_dissolve(features, raise_error=True, base_name="dissolved"):
+	out_name = generate_gdb_filename(base_name)
+	try:
+		arcpy.Dissolve_management(features, out_name)
+	except:
+		if raise_error is False:
+			geoprocessing_log.warning("Couldn't dissolve. Returning non-dissolved layer")
+			return features
+		else:
+			raise
+	return out_name
+
+
+def percent_overlap(feature_one, feature_two, dissolve=False):
+	"""
+	ArcGIS 10.1 and up. Not for 10.0
+	:param feature_one:
+	:param feature_two:
+	:param dissolve:
+	"""
+
+	results = {
+		'percent_overlap': None,
+		'intersect_area': None,
+		'union_area': None,
+		'overlap_init_perspective': None,
+		'overlap_final_perspective': None,
+	}
+
+	if dissolve:
+		dissolved_init = fast_dissolve(feature_one)
+		dissolved_final = fast_dissolve(feature_two)
+	else:
+		dissolved_init = feature_one
+		dissolved_final = feature_two
+
+	try:
+		geoprocessing_log.info("Getting area of Initial...",)
+		total_init_area = get_area(dissolved_init)
+
+		geoprocessing_log.info("Getting area of Final...",)
+		total_final_area = get_area(dissolved_final)
+	except:
+		geoprocessing_log.error("Couldn't get the areas")
+		raise
+
+	try:
+		geoprocessing_log.info("Intersecting...",)
+		intersect = temp.generate_fast_filename()
+		arcpy.Intersect_analysis([dissolved_init, dissolved_final], intersect)
+
+		int_curs = arcpy.da.SearchCursor(intersect, field_names=['SHAPE@AREA', ])
+		int_areas = []
+		for row in int_curs:
+			int_areas.append(row[0])
+		intersect_area = sum(int_areas)
+		results['intersect_area'] = intersect_area
+	except:
+		geoprocessing_log.error("Couldn't Intersect")
+		raise
+
+	try:
+		geoprocessing_log.info("Unioning...",)
+		if len(int_areas) > 0:  # short circuit - if it's 0, we can return 0 as the value
+			union = temp.generate_fast_filename()
+			arcpy.Union_analysis([dissolved_init, dissolved_final], union)
+		else:
+			return results
+
+		union_curs = arcpy.da.SearchCursor(union, field_names=['SHAPE@AREA'])
+		union_areas = []
+		for row in union_curs:
+			union_areas.append(row[0])
+		union_area = sum(union_areas)
+		results['union_area'] = union_area
+	except:
+		geoprocessing_log.error("Couldn't Union")
+		raise
+
+	geoprocessing_log.info("Deleting temporary datasets and Calculating")
+
+	arcpy.Delete_management(intersect)  # clean up - it's an in_memory dataset
+	arcpy.Delete_management(union)  # clean up - it's an in_memory dataset
+
+	results['percent_overlap'] = (float(intersect_area) / float(union_area)) * 100
+	results['overlap_init_perspective'] = (float(intersect_area) / float(total_init_area)) * 100
+	results['overlap_final_perspective'] = (float(intersect_area) / float(total_final_area)) * 100
+
+	return results
+
+
+def get_area(feature_class):
+	'''returns the total area of a feature class'''
+
+	temp_fc = generate_gdb_filename(return_full=True)
+	arcpy.CalculateAreas_stats(feature_class, temp_fc)
+	area_field = "F_AREA" # this is hardcoded, but now guaranteed because it is added to a copy and the field is updated if it already exists
+
+	area_curs = arcpy.SearchCursor(temp_fc)
+	total_area = 0
+	for row in area_curs:
+		total_area += row.getValue(area_field)
+	del row
+	del area_curs
+
+	return total_area

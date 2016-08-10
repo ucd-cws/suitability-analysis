@@ -15,6 +15,12 @@ temp_datasets = []
 geoprocessing_log = logging.getLogger("geoprocessing")
 
 
+def generate_fast_filename(name_base="xt", return_full=True, scratch=True):
+	'''uses the in_memory workspace and calls generate_gdb_filename with that as the gdb'''
+
+	return generate_gdb_filename(name_base, return_full, "in_memory", scratch)
+
+
 def generate_gdb_filename(name_base="xt", return_full=True, gdb=None, scratch=False):
 	'''returns the filename and the gdb separately for use in some tools'''
 	if gdb is None:

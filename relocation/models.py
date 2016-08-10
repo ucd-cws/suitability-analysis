@@ -17,12 +17,14 @@ geoprocessing_log = logging.getLogger("geoprocessing_log")
 
 import arcpy
 
+from FloodMitigation import local_settings
 from FloodMitigation.local_settings import RUN_GEOPROCESSING, ZONAL_STATS_BUG
 from FloodMitigation.settings import CHOSEN_FIELD
 
 from relocation.gis.temp import generate_gdb_filename
 
 from relocation import gis
+from relocation.gis import river_side
 from relocation.gis import slope
 from relocation.gis import protected_areas
 from relocation.gis import merge
@@ -78,6 +80,29 @@ HISTORIC_LAND_COVER_CHOICES = (  # used for remapping the numbers to categorical
 	(16, "Woody_Wetland"),
 	(17, "Perennial_Ice_Snow"),
 )
+
+CURRENT_TO_HISTORIC_LAND_USE_MAP = {
+	"11 - Open Water": "Water",
+	"12 - Perennial Ice/Snow": "Perennial_Ice_Snow",
+	"21 - Developed, Open Space": "Developed",
+	"22 - Developed, Low Intensity": "Developed",
+	"23 - Developed, Medium Intensity ": "Developed",
+	"24 - Developed, High Intensity ": "Developed",
+	"31 - Barren Land (Rock/Sand/Clay)": "Developed",
+	"41 - Deciduous Forest": "Deciduous_Forest",
+	"42 - Evergreen Forest": "Evergreen_Forest",
+	"43 - Mixed Forest": "Mixed_Forest",
+	"51 - Dwarf Scrub": "Shrubland",
+	"52 - Shrub/Scrub": "Shrubland",
+	"71 - Grassland/Herbaceous": "Grassland",
+	"72 - Sedge/Herbaceous": "Herbaceous_Wetland",
+	"73 - Lichens": "Barren",
+	"74 - Moss": "Barren",
+	"81 - Pasture/Hay": "Hay_Pasture_land",
+	"82 - Cultivated Crops": "Cultivated_Cropland",
+	"90 - Woody Wetlands": "Woody_Wetland",
+	"95 - Emergent Herbaceous Wetlands": "Herbaceous_Wetland",
+}
 
 
 def get_field_names(read_object):
@@ -135,7 +160,7 @@ class Region(models.Model):
 	# some of these aren't needed and they just aren't available. Available constraint validation should occur
 	# when adding a constraint
 	dem_name = models.CharField(max_length=255, )
-	dem = models.FilePathField(null=True, blank=True, editable=False)
+	_dem = models.FilePathField(null=True, blank=True, editable=False)
 	slope_name = models.CharField(max_length=255, )
 	slope = models.FilePathField(null=True, blank=True, editable=False)
 	land_cover_name = models.CharField(max_length=255, )
@@ -146,12 +171,48 @@ class Region(models.Model):
 	protected_areas = models.FilePathField(null=True, blank=True, editable=False)
 	floodplain_areas_name = models.CharField(max_length=255, )
 	floodplain_areas = models.FilePathField(null=True, blank=True, editable=False)
-	tiger_lines_name = models.CharField(max_length=255, )
-	tiger_lines = models.FilePathField(null=True, blank=True, editable=False)
+	roads_name = models.CharField(max_length=255, )
+	roads = models.FilePathField(null=True, blank=True, editable=False)
 	rivers_name = models.CharField(max_length=255, )
 	rivers = models.FilePathField(null=True, blank=True, editable=False)
+	_barrier_river = models.FilePathField(null=True, blank=True, editable=False)
 	parcels_name = models.CharField(max_length=255, null=True, blank=True)
 	parcels = models.FilePathField(null=True, blank=True, editable=False)
+
+	def check_path(self, value):
+		"""
+			Used in setter functions to check if the path is relative to BASE_DIR and appropriately transform it for storage
+		:param value:
+		:return:
+		"""
+		if not os.path.isabs(value):  # if it's a relative path, we assume it's relative to BASE_DIR
+			return value
+		else:  # it's absolute, but is it absolute to the right thing?
+			if BASE_DIR in value:  # if it's relative to BASE_DIR, strip that off, otherwise we'll leave it as a full path, which gets caught by the getter
+				value.replace(BASE_DIR, "")  # remove BASE_DIR, then set the value
+			return value
+
+	def get_path(self, property):
+		if os.path.isabs(property):  # if it's already a full path
+			return property  # return it
+		else:  # otherwise, it needs to be combined with BASE_DIR
+			return os.path.join(BASE_DIR, property)
+
+	@property
+	def dem(self):
+		return self.get_path(self._dem)
+
+	@dem.setter
+	def dem(self, value):
+		self._dem = self.check_path(value)
+
+	@property
+	def barrier_river(self):
+		return self.get_path(self._barrier_river)
+
+	@barrier_river.setter
+	def barrier_river(self, value):
+		self._barrier_river = self.check_path(value)
 
 	# the following items are now distance rasters
 	# floodplain_distance = models.FilePathField(null=True, blank=True, editable=True)
@@ -185,7 +246,7 @@ class Region(models.Model):
 		self.census_places = os.path.join(str(self.layers), self.census_places_name)
 		self.protected_areas = os.path.join(str(self.layers), self.protected_areas_name)
 		self.floodplain_areas = os.path.join(str(self.layers), self.floodplain_areas_name)
-		self.tiger_lines = os.path.join(str(self.layers), self.tiger_lines_name)
+		self.roads = os.path.join(str(self.layers), self.roads_name)
 		self.parcels = os.path.join(str(self.layers), self.parcels_name)
 		self.save()
 
@@ -218,10 +279,10 @@ class Region(models.Model):
 
 			self.save()
 
-	def _fix_parcels(self, side_length=142):
+	def _fix_parcels(self, side_length=local_settings.PARCEL_HEXAGON_SIDE_LENGTH):
 		"""
 			Called when parcels layer isn't defined - generates a hexagonal mesh coveriung the region, based on the region's extent_polygon property
-			default side length value comes from monroe parcels - average parcel area is 53k m2. side length of hexagon with that area is 142
+			val.dis
 		:return:
 		"""
 
@@ -257,7 +318,7 @@ class Region(models.Model):
 		self.make_distance_raster(self.floodplain_areas, "floodplain_distance", grouping="floodplains", metadata="distance to floodplain data", clear_existing=clear_existing, expand_search_area=expand_search_area)
 
 	def compute_major_road_distance(self, clear_existing=False):
-		self.make_distance_raster(self.tiger_lines, "major_road_distance", grouping="roads", metadata="Distance to road line data for this region", clear_existing=clear_existing, expand_search_area=None)
+		self.make_distance_raster(self.roads, "major_road_distance", grouping="roads", metadata="Distance to road line data for this region", clear_existing=clear_existing, expand_search_area=None)
 
 	def compute_protected_areas_distance(self, clear_existing=False, expand_search_area="80000 Meters"):
 		self.make_distance_raster(self.protected_areas, "protected_distance", grouping="protected_areas", metadata="Distance to PAD-US data", clear_existing=clear_existing, expand_search_area=expand_search_area)
@@ -295,7 +356,7 @@ class Region(models.Model):
 		clipped_features = generate_gdb_filename("clipped_rivers", scratch=True)
 		arcpy.Clip_analysis(self.rivers, self.extent_polygon, clipped_features)  # make it be only within the raster's extent before proceeding
 
-		for upstream_area in (0,1000,10000,100000, 1000000):  # run for every stream order
+		for upstream_area in (0,1000,10000,):  # run for every stream order
 			processing_log.info("Computing Distance to Streams with Upstream Area >= {}".format(upstream_area))
 			new_raster = DistanceRaster()
 			new_raster.grouping = "rivers"
@@ -453,7 +514,8 @@ class PolygonStatistics(models.Model):
 		if RUN_GEOPROCESSING:
 			#self.compute_distance_to_floodplain()
 			#self.compute_distance_to_roads()
-			self.compute_land_cover()
+			if local_settings.MODEL_LAND_USE:
+				self.compute_land_cover()
 			self.compute_centroid_elevation()
 			self.compute_slope_and_elevation()
 			self.compute_centroid_distances()
@@ -495,7 +557,7 @@ class PolygonStatistics(models.Model):
 		else:
 			return self.id_field
 
-	def zonal_statistics(self, raster, name, statistics_type="MIN_MAX_MEAN", fields=("MIN", "MAX", "MEAN")):
+	def zonal_statistics(self, raster, name, statistics_type="MIN_MAX_MEAN", fields=local_settings.MIN_MAX_MEAN_JOIN):
 		"""
 			Extracts zonal statistics from a raster, and joins the min, max, and mean back to the parcels layer.
 			Given a raster and a name, fields will be named mean_{name}, min_{name}, and max_{name}
@@ -691,7 +753,7 @@ class PolygonStatistics(models.Model):
 
 		processing_log.info("Getting Distance Raster Distances")
 
-		for distance_raster in analysis.region.distance_rasters.all():
+		for distance_raster in analysis.region.distance_rasters.filter(active=True):
 			processing_log.info("Getting Min/Max/Mean distance to {}".format(distance_raster.name))
 			self.zonal_statistics(distance_raster.path, distance_raster.name)
 
@@ -989,7 +1051,7 @@ class RelocationStatistics(Location):
 		for mmm in self.min_max_means.all():
 			mmm.delete()  # delete the existing min-max-means - we're going to recreate them now
 
-		for raster in self.get_analysis_object().region.distance_rasters.all():
+		for raster in self.get_analysis_object().region.distance_rasters.filter(active=True):
 			min_max_mean = MinMaxMean()
 			min_max_mean.relocation_statistic = self
 			min_max_mean.raster = raster
@@ -1078,19 +1140,25 @@ class RelocatedTown(Analysis):
 
 	year_relocated = models.IntegerField(null=True, blank=True)
 	before_structures = models.FilePathField(null=True, blank=True)
+	unfiltered_before_structures = models.FilePathField(null=True, blank=True)
 	moved_structures = models.FilePathField(null=True, blank=True)
+	unfiltered_moved_structures = models.FilePathField(null=True, blank=True)
 	before_location = models.OneToOneField(RelocationStatistics, related_name="town_before")
 	moved_location = models.OneToOneField(RelocationStatistics, related_name="town_moved")
 
 	pre_move_land_cover = models.FilePathField(null=True, blank=True)
 
-	def relocation_setup(self, name, short_name, before, after, region, make_boundaries_from_structures=False, buffer_distance="100 Meters"):
+	# land use mapper is the thing that converts modern land use to pre-move land use values for comparison in the model
+	#land_use_mapper = models.CharField(default="CURRENT_TO_HISTORIC_LAND_USE_MAP", max_length=255, null=False)
+
+	def relocation_setup(self, name, short_name, before, after, unfilt_before, unfilt_after, region, before_structures=None, after_structures=None, make_boundaries_from_structures=False, buffer_distance="50 Meters", exclude_old_town=local_settings.EXCLUDE_OLD_BOUNDARY_FROM_NEW):
 		"""
 			Creates the sub-location objects and attaches them here
 		:param name: Name of the city - locations will be based on this
 		:param before:
 		:param after_poly:
 		:param region: Region object that this town/region will be attached to.
+		:param exclude_old_town: when true, runs a function that erases the area of the old town from the new town polygon so that we get a clean analysis
 		:return:
 		"""
 
@@ -1099,8 +1167,14 @@ class RelocatedTown(Analysis):
 		self.region = region
 		self.setup()
 
+		self.unfiltered_before_structures = unfilt_before
+		self.unfiltered_moved_structures = unfilt_after
 
-		if make_boundaries_from_structures:
+		if before_structures and after_structures and make_boundaries_from_structures:
+
+			before = self.filter_structures(before_structures)
+			after = self.filter_structures(after_structures)
+
 			self.before_structures = before
 			self.moved_structures = after
 			before_poly = self._make_boundary(before, buffer_distance, "before")
@@ -1108,6 +1182,12 @@ class RelocatedTown(Analysis):
 		else:
 			before_poly = before
 			after_poly = after
+
+			self.before_structures = before_structures
+			self.after_structures = after_structures
+
+		if exclude_old_town:
+			after_poly = self.exclude_old_boundary_from_new(before_poly, after_poly,)
 
 		self._make_location(before_poly, "before")
 		self._make_location(after_poly, "after")
@@ -1127,6 +1207,11 @@ class RelocatedTown(Analysis):
 
 			:param no_rescale: indicates which fields should not be rescaled based on the original data
 		"""
+
+		if not RUN_GEOPROCESSING:
+			processing_log.info("Skipping calibration because RUN_GEOPROCESSING is False")
+			return
+
 		self.mark_final_parcels()
 
 		# scale the min max mean objects!
@@ -1163,7 +1248,56 @@ class RelocatedTown(Analysis):
 		self.parcels.rescale(field, value)  # get the value for the
 
 	def get_location(self):
+
 		return self.before_location
+
+	def filter_structures(self, structures, include_type="Residence_or_Business"):
+		"""
+			Not all structures should be included - the way Sasha set it up, we want to filter some structures out automatically
+		:param structures:
+		:param include_type:
+		:return:
+		"""
+
+		processing_log.info("Filtering structures to permananent, in-town structures")
+		fields = [field.name for field in arcpy.ListFields(structures)]
+
+		structures_object = common.data_file(structures)
+		structures_object.set_delimiters()  # figure out what type of workspace it's in so we can write a query for it
+
+		query_string = ""
+		if "Structure_type" in fields:
+			query_string += "{}Structure_Type{} = '{}' and ".format(structures_object.delim_open, structures_object.delim_close, include_type)
+
+		if "Town_Boundary" in fields:
+			query_string += "{}Town_Boundary{} = 'In' and ".format(structures_object.delim_open, structures_object.delim_close)
+
+		query_string = query_string[:-5]  #chop off the last five - so that regardless, we always get a good query string
+
+		layer = "structures_layer"
+		arcpy.MakeFeatureLayer_management(structures, layer, where_clause=query_string)
+		temp_layer = generate_gdb_filename("{}_filtered_structures".format(self.name), gdb=self.workspace)
+		try:
+			arcpy.CopyFeatures_management(layer, temp_layer)
+		finally:
+			arcpy.Delete_management(layer)
+
+		return temp_layer
+
+	def exclude_old_boundary_from_new(self, before, after):
+		"""
+			We have a problem of significant overlap between the old boundaries - we're mostly concerned with where they
+			started building when they moved. This function excludes anywhere within the old boundary from the new one
+		:return:
+		"""
+
+		processing_log.info("Excluding boundary of old town from new town boundary")
+		new_name = generate_gdb_filename("{}_new_boundary_with_old_excluded".format(self.name), gdb=self.workspace)
+
+		arcpy.Erase_analysis(after, before, new_name)
+
+		return new_name
+
 
 	def _make_boundary(self, features, buffer_distance, name_suffix=None):
 		"""
@@ -1193,6 +1327,9 @@ class RelocatedTown(Analysis):
 				geoprocessing_log.warn("failed to clean up in_memory workspace and delete concave hull generated boundary")
 
 		return final_layer
+
+	def mark_river_side(self):
+		river_side.mark_side_of_river(self.parcels.layer, self.before_location.boundary_polygon, self.before_location.region.barrier_river)
 
 	def mark_final_parcels(self, selection_type="INTERSECT"):
 		"""
@@ -1343,7 +1480,7 @@ class LandCoverConstraint(Constraint):
 		self.polygon_layer = land_use.land_use(self.suitability_analysis.location.region.land_cover,
 											   self.suitability_analysis.location.search_area,
 											   self.excluded_types.all(),
-											   self.suitability_analysis.location.region.tiger_lines,
+											   self.suitability_analysis.location.region.roads,
 											   self.suitability_analysis.location.region.census_places,
 											   self.suitability_analysis.location.region.crs_string,
 											   self.suitability_analysis.workspace)
@@ -1389,7 +1526,7 @@ class RoadClassDistanceConstraint(Constraint):
 	where_clause = models.TextField(default="")
 
 	def run(self):
-		roads.road_distance(self.constraint_manager.suitability_analysis.location.region.tiger_lines, self.max_distance, self.where_clause, self.constraint_manager.suitability_analysis.workspace)
+		roads.road_distance(self.constraint_manager.suitability_analysis.location.region.roads, self.max_distance, self.where_clause, self.constraint_manager.suitability_analysis.workspace)
 
 
 class ScoredConstraint(Constraint):
