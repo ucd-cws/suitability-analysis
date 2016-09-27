@@ -13,7 +13,6 @@ FloodMitigation/secrets.py
 activate.bat
 relocation/migrations/*
 FloodMitigation/local_settings.py
-scratch/scratch.gdb/*
 log_db.sqlite3
 *.geojson
 relocation/static/relocation/js/leaflet_ajax/src/*
@@ -25,3 +24,5 @@ relocation/static/relocation/js/leaflet_ajax/server.js
 relocation/static/relocation/js/leaflet_ajax/.gitignore
 *.dropbox
 desktop.ini
+scratch/*
+relocation/tbx/hexagons/example.gdb/*

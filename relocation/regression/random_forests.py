@@ -160,7 +160,7 @@ class ModelRunner(object):
 
 		self.withhold_and_fit_model(withhold=withhold)
 
-		total_y_trues = np.count_nonzero(self.withheld_truth)
+		self.total_y_trues = np.count_nonzero(self.withheld_truth)
 		self.validate()
 
 		processing_log.info("Total records: {}".format(self.number_records))
@@ -171,9 +171,9 @@ class ModelRunner(object):
 		processing_log.info("Underpredicted: {}".format(self.underpredict))
 		processing_log.info("Overpredicted: {}".format(self.overpredict))
 
-		self.percent_incorrect = self.underpredict / total_y_trues
+		self.percent_incorrect = self.underpredict / self.total_y_trues
 
-		processing_log.info("Total 'True' values in validation dataset: {}".format(total_y_trues))
+		processing_log.info("Total 'True' values in validation dataset: {}".format(self.total_y_trues))
 		processing_log.info("Percent incorrect for True: {}".format(self.percent_incorrect))
 
 	def feature_importance(self):
@@ -188,6 +188,54 @@ class ModelRunner(object):
 
 		for value in sorted_keys:
 			processing_log.info("{}: {}".format(features_and_values[value], value))
+
+	def run_many(self, num_iterations=50):
+		validator = Validation()
+
+		if not self._data.any():
+			self.load_data()
+
+		for iteration in range(num_iterations):
+			processing_log.info("Iteration {}".format(iteration))
+			self.reshuffle()
+			self.withhold_and_fit_model(withhold=.1)
+
+			self.total_y_trues = np.count_nonzero(self.withheld_truth)
+			self.validate()
+
+			processing_log.info("Total records: {}".format(self.number_records))
+			processing_log.info("Number of withheld records: {}".format(self.number_withheld))
+			self.percent_incorrect = self.underpredict / self.total_y_trues
+
+			validator.num_records.append(self.number_records)
+			validator.withhelds.append(self.number_withheld)
+			validator.corrects.append(self.correct)
+			validator.incorrects.append(self.incorrect)
+			validator.overpredicts.append(self.overpredict)
+			validator.underpredicts.append(self.underpredict)
+			validator.total_y_trues.append(self.total_y_trues)
+			validator.percent_incorrects.append(self.percent_incorrect)
+
+			for index, value in enumerate(self.model.feature_importances_):
+				if not self.fields[index] in validator.feature_importances.keys():  # if it's not already a list, make one
+					validator.feature_importances[self.fields[index]] = []
+				validator.feature_importances[self.fields[index]].append(value)  # append the value
+
+		processing_log.info("--REPORT-- --{} Runs--".format(num_iterations))
+		processing_log.info("Average Number of Records per run: {}".format(validator.get_mean("num_records")))
+		processing_log.info("Average Number Withheld per run: {}".format(validator.get_mean("withhelds")))
+		processing_log.info("Average Corrects per run: {}".format(validator.get_mean("corrects")))
+		processing_log.info("Average Incorrects per run: {}".format(validator.get_mean("incorrects")))
+		processing_log.info("Average Overpredicts per run: {}".format(validator.get_mean("overpredicts")))
+		processing_log.info("Average Underpedicts per run: {}".format(validator.get_mean("underpredicts")))
+		processing_log.info("Average Y Trues per run: {}".format(validator.get_mean("total_y_trues")))
+		processing_log.info("Average Proportion Underpredicts for Y per run: {}".format(validator.get_mean("percent_incorrects")))
+		processing_log.info("Average Total Proportion Correct per run: {}".format(validator.get_mean("corrects")/validator.get_mean("num_records")))
+
+		for key in validator.feature_importances.keys():
+			processing_log.info("Average Importance for {}: {}".format(key, sum(validator.feature_importances[key]) / float(len(validator.feature_importances[key]))))
+
+		return validator  # returns it so that values can be explored
 
 	def check_town_influence(self, num_iterations=5):
 		data_records = {}
@@ -247,3 +295,30 @@ class ModelRunner(object):
 
 
 		pass
+
+
+class Validation(object):
+	num_records = []
+	withhelds = []
+	overpredicts = []
+	underpredicts = []
+	corrects = []
+	incorrects = []
+	percent_incorrects = []
+	total_y_trues = []
+	feature_importances = {}
+
+	def get_mean(self, l_name):
+		"""
+		>>> l = [1,2,4,6]
+		>>> self.get_mean(l)
+		0.8125
+		>>> self.get_mean([1,2,3])
+		2
+
+		:return:
+		"""
+
+		l = getattr(self, l_name)
+
+		return sum(l)/float(len(l))

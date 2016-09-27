@@ -1170,20 +1170,21 @@ class RelocatedTown(Analysis):
 		self.unfiltered_before_structures = unfilt_before
 		self.unfiltered_moved_structures = unfilt_after
 
-		if before_structures and after_structures and make_boundaries_from_structures:
-
-			before = self.filter_structures(before_structures)
-			after = self.filter_structures(after_structures)
-
-			self.before_structures = before
-			self.moved_structures = after
+		if (not before) and (before_structures and make_boundaries_from_structures):
+			# if a before polygon is not provided and we have structures and want to make a boundary
+			self.before_structures = before_structures
 			before_poly = self._make_boundary(before, buffer_distance, "before")
-			after_poly = self._make_boundary(after, buffer_distance, "moved")
 		else:
 			before_poly = before
-			after_poly = after
-
 			self.before_structures = before_structures
+
+		if (not after) and (after_structures and make_boundaries_from_structures):
+			# if an after polygon isn't provided but structures were and we want to make a boundary
+			after = self.filter_structures(after_structures)
+			self.moved_structures = after
+			after_poly = self._make_boundary(after, buffer_distance, "moved")
+		else:
+			after_poly = after
 			self.after_structures = after_structures
 
 		if exclude_old_town:
@@ -1199,6 +1200,7 @@ class RelocatedTown(Analysis):
 
 		self.save()
 		self.parcels.setup()
+		self.mark_river_side()
 
 		self.save()
 

@@ -18,9 +18,20 @@
             <Title>Random Forests in Sklearn</Title>
             <Synopsis>Python version, ArcGIS, etc
 </Synopsis>
+            <Text>To construct the model, we used a Random Forests Classifier in the scikit-learn package for Python. We developed code that handles data loading, withholding, randomization, and validation. Our unit of analysis was the parcel and our response variable was whether or not the parcel was chosen for the relocation site of one of the towns. All parcels for all towns were grouped together into one for this analysis.
+The model code, called ModelRunner, loads all of the parcel records (n=200496) with attributes from the database. It then randomizes the rows before splitting them, with 90% of records (n=180447) used for model training and 10% (n=20049) used for model validation.
+</Text>
         </Document>
         <Document ID="9">
             <Title>Django</Title>
+            <Text>Once the raw data was compiled we built the model. For the model, we used Python 3.4, bundled with ArcGIS Pro for geospatial analysis. The model itself was build using scikit-learn, a Python package commonly used for machine learning. To structure the code and provide for potential future web capabilities, the model was built using the Django framework. The full code is openly available at https://github.com/ucd-cws/suitability-analysis/ without the supporting data.
+The analysis and flow of the model is according to the following:
+Load data for each region - regions are the software’s concept for collecting data for a given area and are used to construct the potential search area for each town
+Preprocess raw data to create parcels and derived surfaces
+Load the relocation town boundaries
+Extract processed data from region as attributes on parcels, including marking the chosen move location
+Do the same as the previous step, but for the original town location instead of the parcels, then use this information to make each attribute on the parcels relative to the original value. For example, if the town elevation was at 280 meters and a parcel’s elevation was 305 meters, then the stored elevation value for the parcel would be 25 meters.
+Merge the attributes for all towns into one data table and load into the statistical model.</Text>
         </Document>
         <Document ID="10">
             <Title>Load data in raw for preprocessing</Title>
@@ -30,9 +41,113 @@
         </Document>
         <Document ID="12">
             <Title>Sasha info</Title>
+            <Text>Town boundaries for assessing relocation were based on the location of digitized structures in the town area at the time of the move and then again using recent . Pre-move structures were digitized from the most accurate maps or imagery available before the indicated date. All structures were digitized as point features and assumed to be permanent structures except in the case of Greensburg, KS. Maps were downloaded from the USGS quad map viewer (http://ngmdb.usgs.gov/maps/TopoView/viewer/#5/39.368/-94.197) as georeferenced tiffs. All maps were at a 1:24000 scale if not otherwise noted below. Any imagery used was downloaded from the USGS EarthExplorer (http://earthexplorer.usgs.gov/) datasets as single frame imagery or past NAIP imagery. Historical imagery source and date are listed below. All imagery was georeferenced to the ESRI imagery basemap using a minimum of six GCPs. 
+
+
+
+Town
+Type
+Source
+Date
+Soldiers Grove
+USGS Historical Topographic Map
+USGS topoView, Gays Mills, WI 1:62500
+Topography from aerial photographs taken in 1965 and field checked in 1966
+Gays Mills
+USGS Historical Topographic Map
+USGS topoView, Gays Mills, WI
+Topography from aerial photographs taken 1981, field checked in 1982, with additional map edits in 1983
+Shawneetown
+USGS Historical Topographic Map
+USGS topoView, Shawneetown, IL 1:62500
+1916
+Post-Move Shawneetown
+USGS Historical Topographic Map
+USGS topoView, Shawneetown, IL
+Aerial photographs taken 1957 and revised in 1959
+Leavenworth 1947
+USGS Historical Topographic Map
+USGS topoView, Leavenworth, IN
+1947
+Leavenworth 1927
+Sanborn Map Company Surveyers Map
+Indiana University Herman B Wells Library Map Collection, https://libraries.indiana.edu/union-list-sanborn-maps#Leavenworth
+May-27
+Leavenworth 1899
+Sanborn-Perris Map Company Limited Surveyers Map
+Indiana University Herman B Wells Library Map Collection, https://libraries.indiana.edu/union-list-sanborn-maps#Leavenworth
+September 1899
+English
+USGS Historical Topographic Map
+USGS topoView, English, IN
+From aerial photographs taken in 1987 and edited in 1989
+Odanah
+USGS Historical Topographic Map
+USGS topoView, Odanah, WI
+Topography from aerial photographs taken in 1963 and field checked in 1964
+Pattonsburg
+USGS Historical Topographic Map
+USGS topoView, Pattonsburg, MO and Coffey, MO
+From aerial photographs taken in 1981, field checked in 1982, and edited in 1984
+Niobrara
+USGS Historical Topographic Map
+USGS topoView, Niobrara, NE and Verdigre, NE
+Topography from aerial imagery taken 1946 and plane-table surveys from 1950. Field checked in 1950
+Valmeyer
+USGS Historical Topographic Map
+USGS topoView, Valmeyer, IL
+Topography from aerial photographs taken in 1986. Field checked in 1989 and edited in 1991
+Rhineland
+USGS Historical Topographic Map
+USGS topoView, Gasconade, MO
+Topography from aerial photographs taken in 1970 and field checked in 1974
+Silex
+USGS Historical Topographic Map
+USGS topoView, Silex, MO and Eolia, MO
+1975 map updated with aerial imagery taken in 1982
+</Text>
         </Document>
         <Document ID="13">
             <Title>Towns</Title>
+            <Text>Model calibration was built around 11 towns in the United States, primarily in the Mid-West, that had relocated after major floods. Other towns that have relocated completely exist in the literature, but they moved for reasons other than flood, so were excluded to not confound the model.
+The towns included in the model’s calibration dataset are listed in the table below.
+Town
+State
+Year Moved
+Soldiers Grove
+WI
+1978
+Gays Mills
+WI
+2008
+Shawneetown
+IL
+1937
+Silex
+MO
+1994
+Leavenworth
+IN
+1937
+English
+IN
+1990
+Odanah
+WI
+~1974
+Pattonsburg
+MO
+1993
+Niobrara
+NE
+1969
+Valmeyer
+IL
+1993
+Rhineland
+MO
+1993
+</Text>
         </Document>
         <Document ID="14"/>
         <Document ID="15">
@@ -43,6 +158,8 @@
         </Document>
         <Document ID="17">
             <Title>Hexagons and Cell Size</Title>
+            <Text>To find relocation sites, we represented the landscape as a set of hexagons that stood in for parcel information. We were able to obtain real parcel data for some sites, but unable to obtain it for others, so for consistency we used hexagons as a compact, continuous unit that covers each area of interest. The hexagons had a side length of 142 meters, which produces a hexagon with an area that matches the average area of a real parcel in Monroe County, Illinois, where the town of Valmeyer in this analysis is located.
+The software built the parcels layer to cover the whole 10 mile search radius for new locations around each town.</Text>
         </Document>
         <Document ID="18"/>
         <Document ID="19">
@@ -50,6 +167,148 @@
         </Document>
         <Document ID="20">
             <Title>Min Max Mean</Title>
+        </Document>
+        <Document ID="21">
+            <Title>Original location</Title>
+        </Document>
+        <Document ID="22">
+            <Title>Rivers of different sizes</Title>
+        </Document>
+        <Document ID="23">
+            <Title>Distance Rasters</Title>
+        </Document>
+        <Document ID="24">
+            <Title>Major Roads</Title>
+        </Document>
+        <Document ID="25">
+            <Title>Protected Areas</Title>
+        </Document>
+        <Document ID="26">
+            <Title>Elevation</Title>
+        </Document>
+        <Document ID="27">
+            <Title>Slope</Title>
+        </Document>
+        <Document ID="28">
+            <Title>100 Year Floodplain</Title>
+        </Document>
+        <Document ID="29">
+            <Title>Correct Side of River</Title>
+        </Document>
+        <Document ID="30">
+            <Title>Chosen</Title>
+        </Document>
+        <Document ID="31">
+            <Title>Model Results</Title>
+            <Text>Acros ___ runs, using this validation dataset, 20011 records were correctly predicted (99.8%) and 38 were incorrectly predicted. Of those 38 records, 35 were underpredictions, or a failure to mark a suitable relocation site as suitable, while 3 were overpredictions, or marking an unsuitable location as suitable. While we consider the 99.8% correct to be good performance for the model, one aspect is the mismatch of chosen vs not chosen sites. Only 603 parcels were chosen of the more than 200000 records, and though Random Forests handles this well, we get poor predictive power from the perspective of locating suitable sites. In the validation dataset 66 of the records were chosen sites, giving us 53% underprediction of relocation sites. The overall performance of the model indicates that the model does well in determining unsuitable locations, but the model has room for improvement in predicting suitable locations.</Text>
+        </Document>
+        <Document ID="32">
+            <Title>Overprediction Minimal</Title>
+        </Document>
+        <Document ID="33">
+            <Title>Feature Importances</Title>
+            <Text>The most dominant factors in the model’s classification of a location as suitable or not were the distance to the original town site (over 25% of predictive power from this variable), the minimum elevation different compared with the old town, the distance to protected areas and the distance to rivers with more than 1000 square kilometers upstream. The full list of feature importances is below.
+
+
+Feature
+Importance in model (sums to 1), sorted most to least
+Centroid Distance to Original Boundary
+0.2612512690732874
+Minimum Elevation
+0.07219055027041242
+Maximum Distance to Protected Areas
+0.05815608603640363
+Maximum Distance to Rivers with 1000 sq Km Upstream
+0.05032541376656654
+Maximum Elevation
+0.0480780488108329
+Minimum Distance to Rivers with 1000 sq Km Upstream
+0.04703372520094266
+Minimum Distance to Protected Areas
+0.04519511213563357
+Maximum Distance to Major Roads
+0.04416740516984538
+Maximum Slope
+0.043939511240999846
+Minimum Slope
+0.04221989474682591
+Centroid Elevation
+0.04043382542459433
+Max Distance to All Rivers
+0.03873099320716999
+Minimum Distance to Floodplain
+0.036444800424131375
+Maximum Distance to Floodplain
+0.03424695736093676
+Minimum Distance to Major Roads
+0.03266908615745475
+Minimum Distance to Rivers with 10000 sq Km Upstream
+0.03149099750849243
+Minimum Distance to All Rivers
+0.030432018534662802
+Maximum Distance to Rivers with 10000 sq Km Upstream
+0.02205214952578142
+Same Side of River
+0.020942155405025926
+
+</Text>
+        </Document>
+        <Document ID="34">
+            <Title>Barrier Rivers</Title>
+            <Text>We hypothesized, based on the choices of the towns in the model, that towns would prefer to stay on the same side of the river they were flooded by when they moved. To handle this, we developed a concept of a barrier river as way to determine parcels that were on the same side of the river as the town’s original location or on the other side. For towns that straddled their river, this assessment does not distinguish the two. In the case of one town, the barrier line crosses a small ridgeline to connect two small drainages since the main river itself did not bisect the search area - a requirement for our analysis</Text>
+        </Document>
+        <Document ID="35">
+            <Title>Other Data</Title>
+            <Text>PAD-US
+NHDPlus for Rivers</Text>
+        </Document>
+        <Document ID="36">
+            <Title>Summary</Title>
+            <Text>To determine mitigation potential for towns in floodplains with repetitive losses due to flooding, we built a calibrated statistical model using a Random Forests based classifier to find potential relocation sites for a town. Model calibration was based on the relocation of 11 towns that moved from locations in the floodplain to locations outside of the floodplain between 1937 and 2008.
+To build this model, we extracted relevant summary variables to town boundaries and to generated “parcels” for the area, then fed the resulting data for each parcel into a machine learning model.</Text>
+        </Document>
+        <Document ID="37">
+            <Title>Data Processing</Title>
+            <Text>Variables were extracted for both the town boundary and for all parcels. To get a relative measure of each value in a parcel, values subtracted the value for the original location of the town from the parcel’s value. All values were then scaled and centered so that the mean was 0 and the min and max values were -1 and 1 for consistency.</Text>
+        </Document>
+        <Document ID="38">
+            <Title>Town Boundaries</Title>
+            <Text>After digitizing the structures, a boundary was generated based on a convex hull (minimum bounding geometry) of the structures, buffered by 100 meters. Only structures deemed to be permanent, rather than outbuildings, etc, were included for the convex hull. Where the pre-move boundary and the post-move boundary overlapped, the pre-move area was excluded from the post-move.</Text>
+        </Document>
+        <Document ID="39">
+            <Title>Floodplain Digitizing</Title>
+            <Text>Most floodplain data used in the model came from the April 28th, 2016 version of the National Flood Hazard Dataset (NFHL). The model uses the 100 year floodplain data, zones A and AE to represent floodplains to avoid.
+The NFHL is incomplete though, so floodplain data needed to be filled in using hand digitized polygons from the Digital Flood Insurance Rate Maps (DFIRMs) where data were available.
+In the case of lands on Native American reservation lands (Odanah and part of the Niobrara search area), DFIRMs were not available, so we generated a representative floodplain polygon using the National Hydrography Dataset Plus Version 2 data. For each segment of river with more than 250 square kilometers of catchment area upstream, the area of the upstream catchment in square kilometers was divided by 10 and the resulting value in meters used to buffer the segment. This buffered area represented the floodplain for these locations.</Text>
+        </Document>
+        <Document ID="40">
+            <Title>Roads Digitizing</Title>
+            <Text>To represent roads in the model, we digitized major roads from historical USGS topo maps. While a comprehensive roads layer exists for the United States from the US Census Bureau, there is no dataset representing historical roads at the times the towns moved and using the modern layer would skew the model. For the model, we sought to use main roads, representing potential existing connections for transportation, but exclude smaller roads that would not support through traffic.
+For each town, the most recent topo map to the date of the town’s relocation was acquired and main roads were chosen based on the quad map symbology and running longer distances connecting locations across the search area - often symbolized red, red and white striped, or bold black. Any roads connecting to the symbolized roads or running through the town were also used. </Text>
+        </Document>
+        <Document ID="41">
+            <Title>What is a distance raster?</Title>
+            <Text>To obtain the distance variables for each parcel, the software preprocesses each variable involved and creates a euclidean distance raster for the variable that covers the study area. These are used to extract the minimum and maximum values to the parcels and the original town boundary with the Zonal Statistics as Table tool in ArcGIS.</Text>
+        </Document>
+        <Document ID="42">
+            <Title>List of Variables</Title>
+            <Text>The model uses the following variables:
+Centroid elevation
+Minimum and maximum elevation
+Minimum and maximum slope
+Distance of parcel centroid to original town boundary
+Minimum and maximum distance to floodplain
+Minimum and maximum distance to major road
+Minimum and maximum distance to a protected area
+Minimum and maximum distance to all rivers
+Minimum and maximum distance to rivers with more than 1,000 square Km upstream
+Minimum and maximum distance to rivers with more than 10,000 square Km upstream
+Whether the parcel is on the same side of the river as the original town location
+
+We tried the following variables but ultimately rejected them for negligible impact on the model
+Dominant land use in each parcel
+Larger upstream area breakouts for rivers
+Marking whether or not a parcel was protected itself</Text>
         </Document>
     </Documents>
 </SearchIndexes>

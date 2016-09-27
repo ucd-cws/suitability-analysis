@@ -1,0 +1,31 @@
+INFO --REPORT-- --100 Runs--
+INFO Average Number of Records per run: 200496.0
+INFO Average Number Withheld per run: 20049.0
+INFO Average Corrects per run: 20012.62
+INFO Average Incorrects per run: 36.38
+INFO Average Overpredicts per run: 4.14
+INFO Average Underpedicts per run: 32.24
+INFO Average Y Trues per run: 60.33
+INFO Average Proportion Underpredicts for Y per run: 0.535316188123499
+INFO Average Total Proportion Correct per run: 0.09981555741760434
+
+
+INFO Average Importance for stat_centroid_distance_to_original_boundary: 0.24136130707519723
+INFO Average Importance for stat_min_elevation: 0.07188013993978293
+INFO Average Importance for stat_centroid_elevation: 0.05711069236040367
+INFO Average Importance for stat_min_slope: 0.054840522755137525
+INFO Average Importance for stat_max_protected_distance: 0.04790069608960642
+INFO Average Importance for stat_max_rivers_distance_UA_0: 0.047551855590249256
+INFO Average Importance for stat_min_rivers_distance_UA_1000: 0.04741908671345299
+INFO Average Importance for stat_max_rivers_distance_UA_1000: 0.04690920119178001
+INFO Average Importance for stat_max_floodplain_distance: 0.04568934329979685
+INFO Average Importance for stat_min_protected_distance: 0.04564543966755807
+INFO Average Importance for stat_max_elevation: 0.044560413281302585
+INFO Average Importance for stat_max_slope: 0.0444969449678865
+INFO Average Importance for stat_max_major_road_distance: 0.0412409296650454
+INFO Average Importance for stat_min_floodplain_distance: 0.04088542315554879
+INFO Average Importance for stat_min_rivers_distance_UA_0: 0.03175416607386972
+INFO Average Importance for stat_min_major_road_distance: 0.03003013814387112
+INFO Average Importance for stat_min_rivers_distance_UA_10000: 0.023822353766218635
+INFO Average Importance for stat_max_rivers_distance_UA_10000: 0.021183896335409066
+INFO Average Importance for stat_is_on_correct_side_of_river: 0.01571744992788334

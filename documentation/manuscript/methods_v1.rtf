@@ -1,0 +1,916 @@
+{\rtf1\ansi\ansicpg1252\uc1\deff0
+{\*\bkmkstart Towns}{\*\bkmkstart Sasha_info}{\*\bkmkstart Town_Boundaries}{\*\bkmkstart Hexagons_and_Cell_Size}{\*\bkmkstart Floodplain_Digitizing}{\*\bkmkstart Roads_Digitizing}{\*\bkmkstart Barrier_Rivers}{\*\bkmkstart Other_Data}{\*\bkmkstart Django}{\*\bkmkstart Data_Processing}{\*\bkmkstart List_of_Variables}{\*\bkmkstart What_is_a_distance_raster}{\*\bkmkstart Random_Forests_in_Sklearn}{\*\bkmkstart Model_Results}{\*\bkmkstart Feature_Importances}{\fonttbl{\f0\fnil\fcharset0\fprq2 Courier New;}{\f1\fmodern\fcharset0\fprq2 Calibri;}}
+{\colortbl;\red0\green0\blue0;\red255\green255\blue255;\red128\green128\blue128;}
+{\*\listtable
+{\list\listtemplateid1\listhybrid
+{\listlevel\levelnfc0\levelnfcn0\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\leveltext\'02\'00.;}{\levelnumbers\'01;}\f0\fs24\b0\i0\fi-360\li720\lin720}{\listname ;}\listid1}
+{\list\listtemplateid2\listhybrid
+{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\leveltext\'01\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F;}{\levelnumbers;}\f0\fs24\b0\i0\fi-360\li720\lin720}{\listname ;}\listid2}
+{\list\listtemplateid3\listhybrid
+{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\leveltext\'01\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F;}{\levelnumbers;}\f0\fs24\b0\i0\fi-360\li720\lin720}{\listname ;}\listid3}
+{\list\listtemplateid4\listhybrid
+{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\leveltext\'01\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F;}{\levelnumbers;}\f0\fs24\b0\i0\fi-360\li720\lin720}{\listname ;}\listid4}
+{\list\listtemplateid5\listhybrid
+{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\leveltext\'01\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F;}{\levelnumbers;}\f0\fs24\b0\i0\fi-360\li720\lin720}{\listname ;}\listid5}
+{\list\listtemplateid6\listhybrid
+{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\leveltext\'01\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F;}{\levelnumbers;}\f0\fs24\b0\i0\fi-360\li720\lin720}{\listname ;}\listid6}
+{\list\listtemplateid7\listhybrid
+{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\leveltext\'01\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F;}{\levelnumbers;}\f0\fs24\b0\i0\fi-360\li720\lin720}{\listname ;}\listid7}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}{\listoverride\listid2\listoverridecount0\ls2}{\listoverride\listid3\listoverridecount0\ls3}{\listoverride\listid4\listoverridecount0\ls4}{\listoverride\listid5\listoverridecount0\ls5}{\listoverride\listid6\listoverridecount0\ls6}{\listoverride\listid7\listoverridecount0\ls7}}
+\paperw12240\paperh15840\margl1440\margr1440\margt1440\margb1440\fet2\ftnbj\aenddoc
+\pgnrestart\pgnstarts1{\header{\pard\qr{\f0\fs24 Methods\par}}}
+{\footer{\pard\qc{\f0\fs24 {\chpgn}\par}}}
+
+\pard\plain \fi720\ltrch\loch {\*\bkmkstart Summary}{\f0\fs24\b0\i0 To determine mitigation potential for towns in floodplains with repetitive losses due to flooding, we built a calibrated statistical model using a Random Forests based classifier to find potential relocation sites for a town. Model calibration was based on the relocation of 11 towns that moved from locations in the floodplain to locations outside of the floodplain between 1937 and 2008.}{\*\bkmkend Summary}
+\par\plain {\f0\fs24\b0\i0 To build this model, we extracted relevant summary variables to town boundaries and to generated \loch\af0\hich\af0\dbch\af0\uc1\u8220\'93parcels\u8221\'94 for the area, then fed the resulting data for each parcel into a machine learning model.}
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Towns}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Towns}{\f0\fs24\b0\i0 Model calibration was built around 11 towns in the United States, primarily in the Mid-West, that had relocated after major floods. Other towns that have relocated completely exist in the literature, but they moved for reasons other than flood, so were excluded to not confound the model.}{\*\bkmkend Towns}
+\par\plain {\f0\fs24\b0\i0 The towns included in the model\loch\af0\hich\af0\dbch\af0\uc1\u8217\'92s calibration dataset are listed in the table below.}
+
+
+\trowd\trgaph0 \trautofit1 \trbrdrt\brdrnil \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 Town}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 State}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Year Moved}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrt\brdrnil \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Soldiers Grove}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 WI}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 1978}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Gays Mills}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 WI}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 2008}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Shawneetown}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 IL}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 1937}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Silex}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 MO}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 1994}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Leavenworth}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 IN}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 1937}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 English}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 IN}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 1990}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Odanah}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 WI}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 ~1974}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Pattonsburg}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 MO}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 1993}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Niobrara}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 NE}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 1969}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Valmeyer}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 IL}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 1993}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+
+\trowd\trgaph0 \trautofit1\lastrow \trbrdrr\brdrnil \trbrdrb\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Rhineland}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 MO}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 1993}\cell{
+\trowd\trgaph0 \trautofit1\lastrow \trbrdrr\brdrnil \trbrdrb\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx1480
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx2320
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx3160
+\row}\pard
+\pard\plain \ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Sasha_info}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Sasha_info}{\f0\fs24\b0\i0 Town boundaries for assessing relocation were based on the location of digitized structures in the town area at the time of the move and then again using recent . Pre-move structures were digitized from the most accurate maps or imagery available before the indicated date. All structures were digitized as point features and assumed to be permanent structures except in the case of Greensburg, KS. Maps were downloaded from the USGS quad map viewer (http://ngmdb.usgs.gov/maps/TopoView/viewer/#5/39.368/-94.197) as georeferenced tiffs. All maps were at a 1:24000 scale if not otherwise noted below. Any imagery used was downloaded from the USGS EarthExplorer (http://earthexplorer.usgs.gov/) datasets as single frame imagery or past NAIP imagery. Historical imagery source and date are listed below. All imagery was georeferenced to the ESRI imagery basemap using a minimum of six GCPs. }{\*\bkmkend Sasha_info}
+\par\plain \f0\fs24\b0\i0
+\par\plain \f0\fs24\b0\i0
+\par\pard\plain \ltrch\loch \f0\fs24\b0\i0
+
+
+\trowd\trgaph30 \trautofit1 \trbrdrt\brdrnil \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Town}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Type}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Source}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Date}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrt\brdrnil \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Soldiers Grove}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Gays Mills, WI 1:62500}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Topography from aerial photographs taken in 1965 and field checked in 1966}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Gays Mills}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Gays Mills, WI}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Topography from aerial photographs taken 1981, field checked in 1982, with additional map edits in 1983}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Shawneetown}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Shawneetown, IL 1:62500}\cell 
+\pard\plain \intbl\itap1\qr{\f1\fs24\b0\i0\cf1 1916}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Post-Move Shawneetown}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Shawneetown, IL}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Aerial photographs taken 1957 and revised in 1959}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Leavenworth 1947}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Leavenworth, IN}\cell 
+\pard\plain \intbl\itap1\qr{\f1\fs24\b0\i0\cf1 1947}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Leavenworth 1927}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Sanborn Map Company Surveyers Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Indiana University Herman B Wells Library Map Collection, https://libraries.indiana.edu/union-list-sanborn-maps#Leavenworth}\cell 
+\pard\plain \intbl\itap1\qr{\f1\fs24\b0\i0\cf1 May-27}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Leavenworth 1899}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Sanborn-Perris Map Company Limited Surveyers Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Indiana University Herman B Wells Library Map Collection, https://libraries.indiana.edu/union-list-sanborn-maps#Leavenworth}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 September 1899}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 English}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, English, IN}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 From aerial photographs taken in 1987 and edited in 1989}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Odanah}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Odanah, WI}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Topography from aerial photographs taken in 1963 and field checked in 1964}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Pattonsburg}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Pattonsburg, MO and Coffey, MO}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 From aerial photographs taken in 1981, field checked in 1982, and edited in 1984}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Niobrara}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Niobrara, NE and Verdigre, NE}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Topography from aerial imagery taken 1946 and plane-table surveys from 1950. Field checked in 1950}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Valmeyer}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Valmeyer, IL}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Topography from aerial photographs taken in 1986. Field checked in 1989 and edited in 1991}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Rhineland}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Gasconade, MO}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Topography from aerial photographs taken in 1970 and field checked in 1974}\cell{
+\trowd\trgaph30 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+
+\trowd\trgaph30 \trautofit1\lastrow \trbrdrr\brdrnil \trbrdrb\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 Silex}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS Historical Topographic Map}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 USGS topoView, Silex, MO and Eolia, MO}\cell 
+\pard\plain \intbl\itap1\ql{\f1\fs24\b0\i0\cf1 1975 map updated with aerial imagery taken in 1982}\cell{
+\trowd\trgaph30 \trautofit1\lastrow \trbrdrr\brdrnil \trbrdrb\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx8000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx12000
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx16000
+\row}\pard
+\pard\plain \ql\ltrch\loch \f0\fs24{\*\bkmkstart Town_Boundaries}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Town_Boundaries}{\f0\fs24\b0\i0 After digitizing the structures, a boundary was generated based on a convex hull (minimum bounding geometry) of the structures, buffered by 100 meters. Only structures deemed to be permanent, rather than outbuildings, etc, were included for the convex hull. Where the pre-move boundary and the post-move boundary overlapped, the pre-move area was excluded from the post-move.}{\*\bkmkend Town_Boundaries}
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Hexagons_and_Cell_Size}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Hexagons_and_Cell_Size}{\f0\fs24\b0\i0 To find relocation sites, we represented the landscape as a set of hexagons that stood in for parcel information. We were able to obtain real parcel data for some sites, but unable to obtain it for others, so for consistency we used hexagons as a compact, continuous unit that covers each area of interest. The hexagons had a side length of 142 meters, which produces a hexagon with an area that matches the average area of a real parcel in Monroe County, Illinois, where the town of Valmeyer in this analysis is located.}{\*\bkmkend Hexagons_and_Cell_Size}
+\par\plain {\f0\fs24\b0\i0 The software built the parcels layer to cover the whole 10 mile search radius for new locations around each town.}
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Floodplain_Digitizing}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Floodplain_Digitizing}{\f0\fs24\b0\i0 Most floodplain data used in the model came from the April 28th, 2016 version of the National Flood Hazard Dataset (NFHL). The model uses the 100 year floodplain data, zones A and AE to represent floodplains to avoid.}{\*\bkmkend Floodplain_Digitizing}
+\par\plain {\f0\fs24\b0\i0 The NFHL is incomplete though, so floodplain data needed to be filled in using hand digitized polygons from the Digital Flood Insurance Rate Maps (DFIRMs) where data were available.}
+\par\plain {\f0\fs24\b0\i0 In the case of lands on Native American reservation lands (Odanah and part of the Niobrara search area), DFIRMs were not available, so we generated a representative floodplain polygon using the National Hydrography Dataset Plus Version 2 data. For each segment of river with more than 250 square kilometers of catchment area upstream, the area of the upstream catchment in square kilometers was divided by 10 and the resulting value in meters used to buffer the segment. This buffered area represented the floodplain for these locations.}
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Roads_Digitizing}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Roads_Digitizing}{\f0\fs24\b0\i0 To represent roads in the model, we digitized major roads from historical USGS topo maps. While a comprehensive roads layer exists for the United States from the US Census Bureau, there is no dataset representing historical roads at the times the towns moved and using the modern layer would skew the model. For the model, we sought to use main roads, representing potential existing connections for transportation, but exclude smaller roads that would not support through traffic.}{\*\bkmkend Roads_Digitizing}
+\par\plain {\f0\fs24\b0\i0 For each town, the most recent topo map to the date of the town\loch\af0\hich\af0\dbch\af0\uc1\u8217\'92s relocation was acquired and main }{\f0\fs24 roads were chosen based on the quad map symbology and running longer distances connecting locations across the search area - often symbolized red, red and white striped, or bold black. Any roads connecting to the symbolized roads or running through the town were also used. }
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24{\*\bkmkstart Barrier_Rivers}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Barrier_Rivers}{\f0\fs24\b0\i0 We hypothesized, based on the choices of the towns in the model, that towns would prefer to stay on the same side of the river they were flooded by when they moved. To handle this, we developed a concept of a barrier river as way to determine parcels that were on the same side of the river as the town\loch\af0\hich\af0\dbch\af0\uc1\u8217\'92s original location or on the other side. For towns that straddled their river, this assessment does not distinguish the two. In the case of one town, the barrier line crosses a small ridgeline to connect two small drainages since the main river itself did not bisect the search area - a requirement for our analysis}{\*\bkmkend Barrier_Rivers}
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Other_Data}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Other_Data}{\f0\fs24\b0\i0 PAD-US}{\*\bkmkend Other_Data}
+\par\plain {\f0\fs24\b0\i0 NHDPlus for Rivers}
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Django}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Django}{\f0\fs24\b0\i0 Once the raw data was compiled we built the model. For the model, we used Python 3.4, bundled with ArcGIS Pro for geospatial analysis. The model itself was build using scikit-learn, a Python package commonly used for machine learning. To structure the code and provide for potential future web capabilities, the model was built using the Django framework. The full code is openly available at https://github.com/ucd-cws/suitability-analysis/ without the supporting data.}{\*\bkmkend Django}
+\par\plain {\f0\fs24\b0\i0 The analysis and flow of the model is according to the following:}
+\par\pard\plain \tx240\tx720\li720\fi-720\ltrch\loch \ls1\ilvl0{\listtext\f0\fs24\b0\i0	1.	}{\f0\fs24\b0\i0 Load data for each region - regions are the software\loch\af0\hich\af0\dbch\af0\uc1\u8217\'92s concept for collecting data for a given area and are used to construct the potential search area for each town}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	2.	}{\f0\fs24\b0\i0 Preprocess raw data to create parcels and derived surfaces}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	3.	}{\f0\fs24\b0\i0 Load the relocation town boundaries}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	4.	}{\f0\fs24\b0\i0 Extract processed data from region as attributes on parcels, including marking the chosen move location}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	5.	}{\f0\fs24\b0\i0 Do the same as the previous step, but for the original town location instead of the parcels, then use this information to make each attribute on the parcels relative to the original value. For example, if the town elevation was at 280 meters and a parcel\loch\af0\hich\af0\dbch\af0\uc1\u8217\'92s elevation was 305 meters, then the stored elevation value for the parcel would be 25 meters.}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	6.	}{\f0\fs24\b0\i0 Merge the attributes for all towns into one data table and load into the statistical model.}
+\par\pard\plain \tx240\tx720\li720\fi-720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Data_Processing}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Data_Processing}{\f0\fs24\b0\i0 Variables were extracted for both the town boundary and for all parcels. To get a relative measure of each value in a parcel, values subtracted the value for the original location of the town from the parcel\loch\af0\hich\af0\dbch\af0\uc1\u8217\'92s value. All values were then scaled and centered so that the mean was 0 and the min and max values were -1 and 1 for consistency.}{\*\bkmkend Data_Processing}
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart List_of_Variables}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart List_of_Variables}{\f0\fs24\b0\i0 The model uses the following variables:}{\*\bkmkend List_of_Variables}
+\par\pard\plain \tx240\tx720\li720\fi-720\ltrch\loch \ls2\ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Centroid elevation}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Minimum and }{\f0\fs24\b0\i0 maximum }{\f0\fs24\b0\i0 elevation}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Minimum and maximum slope}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Distance of parcel centroid to original town boundary}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Minimum and maximum distance to floodplain}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Minimum and }{\f0\fs24\b0\i0 maximum distance}{\f0\fs24\b0\i0  to major road}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Minimum and }{\f0\fs24\b0\i0 maximum distance}{\f0\fs24\b0\i0  to a protected area}
+\par\pard\plain \tx240\tx720\li720\fi-720\ltrch\loch \ls3\ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Minimum and }{\f0\fs24\b0\i0 maximum distance}{\f0\fs24\b0\i0  to all rivers}
+\par\pard\plain \tx240\tx720\li720\fi-720\ltrch\loch \ls4\ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Minimum and maximum distance to rivers with more than 1,000 square Km upstream}
+\par\pard\plain \tx240\tx720\li720\fi-720\ltrch\loch \ls5\ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Minimum and maximum distance to rivers with more than 10,000 square Km upstream}
+\par\pard\plain \tx240\tx720\li720\fi-720\ltrch\loch \ls6\ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Whether the parcel is on the same side of the river as the original town location}
+\par\pard\plain \li720\fi-720\ltrch\loch \f0\fs24\b0\i0
+\par\plain {\f0\fs24\b0\i0 We tried the following variables but ultimately rejected them for negligible impact on the model}
+\par\pard\plain \tx240\tx720\li720\fi-720\ltrch\loch \ls7\ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Dominant land use in each parcel}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Larger upstream area breakouts for rivers}
+\par\plain \ilvl0{\listtext\f0\fs24\b0\i0	\loch\af0\hich\af0\dbch\af0\uc1\u9679\'3F	}{\f0\fs24\b0\i0 Marking whether or not a parcel was protected itself}
+\par\pard\plain \tx240\tx720\li720\fi-720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart What_is_a_distance_raster}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart What_is_a_distance_raster}{\f0\fs24\b0\i0 To obtain the distance variables for each parcel, the software preprocesses each variable involved and creates a euclidean distance raster for the variable that covers the study area. These are used to extract the minimum and maximum values to the parcels and the original town boundary with the Zonal Statistics as Table tool in ArcGIS.}{\*\bkmkend What_is_a_distance_raster}
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Random_Forests_in_Sklearn}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Random_Forests_in_Sklearn}{\f0\fs24\b0\i0 To construct the model, we used a Random Forests Classifier in the scikit-learn package for Python. We developed code that handles data loading, withholding, randomization, and validation. Our unit of analysis was the parcel and our response variable was whether or not the parcel was chosen for the relocation site of one of the towns. All parcels for all towns were grouped together into one for this analysis.}{\*\bkmkend Random_Forests_in_Sklearn}
+\par\plain {\f0\fs24\b0\i0 The model code, called ModelRunner, loads all of the parcel records (n=200496) with attributes from the database. It then randomizes the rows before splitting them, with 90% of records (n=180447) used for model training and 10% (n=20049) used for model validation.}
+\par\plain \f0\fs24\b0\i0
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Model_Results}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Model_Results}{\f0\fs24\b0\i0 Acros ___ runs, using this validation dataset, 20011 records were correctly predicted (99.8%) and 38 were incorrectly predicted. Of those 38 records, 35 were underpredictions, or a failure to mark a suitable relocation site as suitable, while 3 were overpredictions, or marking an unsuitable location as suitable. While we consider the 99.8% correct to be good performance for the model, one aspect is the mismatch of chosen vs not chosen sites. Only 603 parcels were chosen of the more than 200000 records, and though Random Forests handles this well, we get poor predictive power from the perspective of locating suitable sites. In the validation dataset 66 of the records were chosen sites, giving us 53% underprediction of relocation sites. The overall performance of the model indicates that the model does well in determining unsuitable locations, but the model has room for improvement in predicting suitable locations.}{\*\bkmkend Model_Results}
+\par\pard\plain \fi720\ql\ltrch\loch \f0\fs24\b0\i0{\*\bkmkstart Feature_Importances}
+\par\pard\plain \fi720\ltrch\loch {\*\bkmkstart Feature_Importances}{\f0\fs24\b0\i0 The most dominant factors in the model\loch\af0\hich\af0\dbch\af0\uc1\u8217\'92s classification of a location as suitable or not were the distance to the original town site (over 25% of predictive power from this variable), the minimum elevation different compared with the old town, the distance to protected areas and the distance to rivers with more than 1000 square kilometers upstream. The full list of feature importances is below.}{\*\bkmkend Feature_Importances}
+\par\plain \f0\fs24\b0\i0
+\par\plain \f0\fs24\b0\i0
+
+
+\trowd\trgaph0 \trautofit1 \trbrdrt\brdrnil \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 Feature}\cell 
+\pard\plain \intbl\itap1\qc{\f0\fs24\b0\i0 Importance in model (sums to 1), sorted most to least}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrt\brdrnil \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Centroid Distance to Original Boundary}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.2612512690732874}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Minimum Elevation}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.07219055027041242}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Maximum Distance to Protected Areas}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.05815608603640363}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Maximum Distance to Rivers with 1000 sq Km Upstream}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.05032541376656654}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Maximum Elevation}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.0480780488108329}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Minimum Distance to Rivers with 1000 sq Km Upstream}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.04703372520094266}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Minimum Distance to Protected Areas}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.04519511213563357}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Maximum Distance to Major Roads}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.04416740516984538}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Maximum Slope}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.043939511240999846}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Minimum Slope}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.04221989474682591}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Centroid Elevation}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.04043382542459433}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Max Distance to All Rivers}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.03873099320716999}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Minimum Distance to Floodplain}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.036444800424131375}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Maximum Distance to Floodplain}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.03424695736093676}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Minimum Distance to Major Roads}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.03266908615745475}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Minimum Distance to Rivers with 10000 sq Km Upstream}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.03149099750849243}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Minimum Distance to All Rivers}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.030432018534662802}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 Maximum Distance to Rivers with 10000 sq Km Upstream}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.02205214952578142}\cell{
+\trowd\trgaph0 \trautofit1 \trbrdrr\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+
+\trowd\trgaph0 \trautofit1\lastrow \trbrdrr\brdrnil \trbrdrb\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+
+\pard\plain \intbl\itap1{\f0\fs24 Same Side of River}\cell 
+\pard\plain \intbl\itap1{\f0\fs24\b0\i0 0.020942155405025926}\cell{
+\trowd\trgaph0 \trautofit1\lastrow \trbrdrr\brdrnil \trbrdrb\brdrnil \trbrdrl\brdrnil 
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx4680
+
+\clvertalt \clshdrawnil\clbrdrt\brdrs\brdrw20\brdrcf3 \clbrdrr\brdrs\brdrw20\brdrcf3 \clbrdrb\brdrs\brdrw20\brdrcf3 \clbrdrl\brdrs\brdrw20\brdrcf3 \cellx9360
+\row}\pard
+\pard\plain \ltrch\loch \f0\fs24\b0\i0}

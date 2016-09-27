@@ -62,7 +62,7 @@ def load_towns(town_names=None):
 				town.relocation_setup(record["name"], record["short_name"], before=record["before_boundary"],
 									  after=record["after_boundary"],before_structures=record["before_structures"],
 									  after_structures=record["moved_structures"], unfilt_before=record["unfiltered_before_structures"],
-									  unfilt_after=record["unfiltered_moved_structures"], region=region, make_boundaries_from_structures=False,
+									  unfilt_after=record["unfiltered_moved_structures"], region=region, make_boundaries_from_structures=True,
 									  exclude_old_town=False)
 				town.save()
 

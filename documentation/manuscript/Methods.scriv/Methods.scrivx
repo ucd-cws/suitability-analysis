@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ScrivenerProject Template="No" Version="1.5" Creator="SCRWIN-1.9.5.0" Device="CWS-SILVERFORK" Modified="2016-07-28 11:51:55 -0700" ModID="A30A25FC-2C82-4ACE-BF1A-BC117A270962">
+<ScrivenerProject Template="No" Version="1.5" Creator="SCRWIN-1.9.5.0" Device="CWS-SILVERFORK" Modified="2016-08-05 16:34:50 -0700" ModID="1189E6CB-D772-47CD-9613-14D185D27035">
     <Binder>
         <BinderItem ID="0" UUID="5D3F6741-24AB-4F76-BE76-BFECF6CF6E69" Created="2016-07-19 10:12:51 -0700" Modified="2016-07-19 10:12:51 -0700" Type="DraftFolder">
             <Title>Draft</Title>
@@ -16,68 +16,95 @@
                         <Target Type="Words">0</Target>
                     </TextSettings>
                     <Children>
-                        <BinderItem ID="12" UUID="84BB855D-B25A-424F-8308-6A89A2BC93B8" Created="2016-07-19 10:17:13 -0700" Modified="2016-07-19 10:17:16 -0700" Type="Text">
-                            <Title>Sasha info</Title>
+                        <BinderItem ID="36" UUID="16289BDF-2B61-4959-9F3F-1EF9F536EA32" Created="2016-08-03 14:39:25 -0700" Modified="2016-08-03 17:33:02 -0700" Type="Text">
+                            <Title>Summary</Title>
                             <MetaData>
                                 <IncludeInCompile>Yes</IncludeInCompile>
                             </MetaData>
                             <TextSettings>
+                                <TextSelection>585,0</TextSelection>
                                 <Target Type="Words">0</Target>
                             </TextSettings>
                         </BinderItem>
-                        <BinderItem ID="13" UUID="6CF36495-8671-4073-B074-DD7EDAC94BB0" Created="2016-07-19 10:17:19 -0700" Modified="2016-07-19 10:17:29 -0700" Type="Text">
+                        <BinderItem ID="13" UUID="6CF36495-8671-4073-B074-DD7EDAC94BB0" Created="2016-07-19 10:17:19 -0700" Modified="2016-08-03 17:34:38 -0700" Type="Text">
                             <Title>Towns</Title>
                             <MetaData>
                                 <IncludeInCompile>Yes</IncludeInCompile>
                             </MetaData>
                             <TextSettings>
+                                <TextSelection>596,0</TextSelection>
                                 <Target Type="Words">0</Target>
                             </TextSettings>
                         </BinderItem>
-                        <BinderItem ID="17" UUID="D7F7C30D-F195-48C2-A7C8-76209B3A8025" Created="2016-07-19 10:18:17 -0700" Modified="2016-07-19 10:18:24 -0700" Type="Text">
+                        <BinderItem ID="12" UUID="84BB855D-B25A-424F-8308-6A89A2BC93B8" Created="2016-07-19 10:17:13 -0700" Modified="2016-08-05 13:28:30 -0700" Type="Text">
+                            <Title>Sasha info</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                                <FileExtension>rtf</FileExtension>
+                            </MetaData>
+                            <TextSettings>
+                                <TextSelection>889,0</TextSelection>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="38" UUID="93E02155-6CD4-4B19-AD64-A0779470F78D" Created="2016-08-03 15:36:08 -0700" Modified="2016-08-05 13:28:32 -0700" Type="Text">
+                            <Title>Town Boundaries</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <TextSelection>375,0</TextSelection>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="17" UUID="D7F7C30D-F195-48C2-A7C8-76209B3A8025" Created="2016-07-19 10:18:17 -0700" Modified="2016-08-03 20:45:14 -0700" Type="Text">
                             <Title>Hexagons and Cell Size</Title>
                             <MetaData>
                                 <IncludeInCompile>Yes</IncludeInCompile>
                             </MetaData>
                             <TextSettings>
+                                <TextSelection>635,0</TextSelection>
                                 <Target Type="Words">0</Target>
                             </TextSettings>
                         </BinderItem>
-                        <BinderItem ID="15" UUID="2A777920-0786-4EEB-8662-CC3C322E0FB1" Created="2016-07-19 10:17:43 -0700" Modified="2016-07-19 10:17:47 -0700" Type="Folder">
+                        <BinderItem ID="39" UUID="BEF39C33-B313-496A-8A3C-FEBBB7A6FAF0" Created="2016-08-04 19:20:49 -0700" Modified="2016-08-04 19:40:58 -0700" Type="Text">
                             <Title>Floodplain Digitizing</Title>
                             <MetaData>
                                 <IncludeInCompile>Yes</IncludeInCompile>
                             </MetaData>
                             <TextSettings>
+                                <TextSelection>937,0</TextSelection>
                                 <Target Type="Words">0</Target>
                             </TextSettings>
                         </BinderItem>
-                        <BinderItem ID="16" UUID="A760482B-882C-4568-83A8-6FC2BFCBF992" Created="2016-07-19 10:17:55 -0700" Modified="2016-07-19 10:17:58 -0700" Type="Folder">
+                        <BinderItem ID="40" UUID="C4805F9B-DEEC-4BF4-80FB-7C8880C05AF7" Created="2016-08-04 19:43:58 -0700" Modified="2016-08-04 19:59:35 -0700" Type="Text">
                             <Title>Roads Digitizing</Title>
                             <MetaData>
                                 <IncludeInCompile>Yes</IncludeInCompile>
                             </MetaData>
                             <TextSettings>
+                                <TextSelection>855,0</TextSelection>
                                 <Target Type="Words">0</Target>
                             </TextSettings>
                         </BinderItem>
-                    </Children>
-                </BinderItem>
-                <BinderItem ID="19" UUID="DF7E6D49-D47C-4596-AF62-05EA8736FB28" Created="2016-07-19 10:18:50 -0700" Modified="2016-07-19 10:18:52 -0700" Type="Folder">
-                    <Title>Variables</Title>
-                    <MetaData>
-                        <IncludeInCompile>Yes</IncludeInCompile>
-                    </MetaData>
-                    <TextSettings>
-                        <Target Type="Words">0</Target>
-                    </TextSettings>
-                    <Children>
-                        <BinderItem ID="20" UUID="247B25E2-F243-4497-B664-42487B845171" Created="2016-07-19 10:18:55 -0700" Modified="2016-07-19 10:18:58 -0700" Type="Text">
-                            <Title>Min Max Mean</Title>
+                        <BinderItem ID="34" UUID="EA9E5057-748F-4919-85E0-A39EB3C6C09B" Created="2016-08-02 08:10:31 -0700" Modified="2016-08-04 19:19:56 -0700" Type="Text">
+                            <Title>Barrier Rivers</Title>
                             <MetaData>
                                 <IncludeInCompile>Yes</IncludeInCompile>
                             </MetaData>
                             <TextSettings>
+                                <TextSelection>619,0</TextSelection>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="35" UUID="C82F5425-B648-47BD-AFAD-EE8A0BEAA6A8" Created="2016-08-02 08:10:40 -0700" Modified="2016-08-05 14:50:56 -0700" Type="Text">
+                            <Title>Other Data</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                                <IconFileName>Warning.tiff</IconFileName>
+                            </MetaData>
+                            <TextSettings>
+                                <TextSelection>25,0</TextSelection>
                                 <Target Type="Words">0</Target>
                             </TextSettings>
                         </BinderItem>
@@ -92,21 +119,55 @@
                         <Target Type="Words">0</Target>
                     </TextSettings>
                     <Children>
-                        <BinderItem ID="9" UUID="C4758860-43F7-4C8F-ACA1-33B16C82A7FD" Created="2016-07-19 10:16:30 -0700" Modified="2016-07-19 10:16:33 -0700" Type="Text">
+                        <BinderItem ID="9" UUID="C4758860-43F7-4C8F-ACA1-33B16C82A7FD" Created="2016-07-19 10:16:30 -0700" Modified="2016-08-05 14:23:46 -0700" Type="Text">
                             <Title>Django</Title>
                             <MetaData>
                                 <IncludeInCompile>Yes</IncludeInCompile>
                             </MetaData>
                             <TextSettings>
+                                <TextSelection>1251,0</TextSelection>
                                 <Target Type="Words">0</Target>
                             </TextSettings>
                         </BinderItem>
-                        <BinderItem ID="10" UUID="435AF270-7A88-40E5-A9A1-7608D145C370" Created="2016-07-19 10:16:37 -0700" Modified="2016-07-19 10:16:47 -0700" Type="Text">
-                            <Title>Load data in raw for preprocessing</Title>
+                        <BinderItem ID="37" UUID="7BB2312D-43E7-4347-A95F-54F5525979A8" Created="2016-08-03 15:35:32 -0700" Modified="2016-08-05 14:33:52 -0700" Type="Text">
+                            <Title>Data Processing</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                                <FileExtension>rtf</FileExtension>
+                            </MetaData>
+                            <TextSettings>
+                                <TextSelection>338,0</TextSelection>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                    </Children>
+                </BinderItem>
+                <BinderItem ID="19" UUID="DF7E6D49-D47C-4596-AF62-05EA8736FB28" Created="2016-07-19 10:18:50 -0700" Modified="2016-07-19 10:18:52 -0700" Type="Folder">
+                    <Title>Variables</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                    <Children>
+                        <BinderItem ID="42" UUID="AEF60A39-2C66-4399-AC6A-0B46F5425A23" Created="2016-08-05 14:26:13 -0700" Modified="2016-08-05 15:28:42 -0700" Type="Text">
+                            <Title>List of Variables</Title>
                             <MetaData>
                                 <IncludeInCompile>Yes</IncludeInCompile>
                             </MetaData>
                             <TextSettings>
+                                <TextSelection>813,0</TextSelection>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="41" UUID="1251CF4B-907B-4DCE-924B-72412D6CAC39" Created="2016-08-05 13:46:57 -0700" Modified="2016-08-05 15:32:54 -0700" Type="Text">
+                            <Title>What is a distance raster?</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <TextSelection>337,0</TextSelection>
                                 <Target Type="Words">0</Target>
                             </TextSettings>
                         </BinderItem>
@@ -121,32 +182,36 @@
                         <Target Type="Words">0</Target>
                     </TextSettings>
                     <Children>
-                        <BinderItem ID="8" UUID="D21BD531-DA7E-49C3-AF03-3F8CF124EB0A" Created="2016-07-19 10:16:21 -0700" Modified="2016-07-19 10:17:11 -0700" Type="Text">
+                        <BinderItem ID="8" UUID="D21BD531-DA7E-49C3-AF03-3F8CF124EB0A" Created="2016-07-19 10:16:21 -0700" Modified="2016-08-05 16:13:03 -0700" Type="Text">
                             <Title>Random Forests in Sklearn</Title>
                             <MetaData>
                                 <IncludeInCompile>Yes</IncludeInCompile>
                             </MetaData>
                             <TextSettings>
-                                <Target Type="Words">0</Target>
-                            </TextSettings>
-                        </BinderItem>
-                        <BinderItem ID="11" UUID="EA8811B4-8FEB-4F1E-8380-90D6FB3FC333" Created="2016-07-19 10:16:53 -0700" Modified="2016-07-19 10:16:58 -0700" Type="Text">
-                            <Title>Model Processing</Title>
-                            <MetaData>
-                                <IncludeInCompile>Yes</IncludeInCompile>
-                            </MetaData>
-                            <TextSettings>
+                                <TextSelection>678,0</TextSelection>
                                 <Target Type="Words">0</Target>
                             </TextSettings>
                         </BinderItem>
                     </Children>
                 </BinderItem>
-                <BinderItem ID="7" UUID="ADA23CB9-0287-4973-A6F5-80285BAE50AF" Created="2016-07-19 10:16:12 -0700" Modified="2016-07-19 10:16:14 -0700" Type="Folder">
+                <BinderItem ID="31" UUID="086DF79A-B9FA-4FE5-9BE4-4897CC775E08" Created="2016-08-02 08:09:28 -0700" Modified="2016-08-05 16:23:17 -0700" Type="Text">
                     <Title>Model Results</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                        <IconFileName>Warning.tiff</IconFileName>
+                    </MetaData>
+                    <TextSettings>
+                        <TextSelection>926,0</TextSelection>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+                <BinderItem ID="33" UUID="366811E3-0CEE-4E0E-B6B5-F5A5CADCA908" Created="2016-08-02 08:09:50 -0700" Modified="2016-08-05 16:34:49 -0700" Type="Text">
+                    <Title>Feature Importances</Title>
                     <MetaData>
                         <IncludeInCompile>Yes</IncludeInCompile>
                     </MetaData>
                     <TextSettings>
+                        <TextSelection>398,0</TextSelection>
                         <Target Type="Words">0</Target>
                     </TextSettings>
                 </BinderItem>
@@ -164,8 +229,8 @@
                 <IncludeInCompile>Yes</IncludeInCompile>
             </MetaData>
             <Children>
-                <BinderItem ID="18" UUID="93BC8F3B-B363-4BDF-B3EA-ED8B3D0CFD7A" Created="2016-07-19 10:18:44 -0700" Modified="2016-07-19 10:18:44 -0700" Type="Text">
-                    <Title></Title>
+                <BinderItem ID="16" UUID="A760482B-882C-4568-83A8-6FC2BFCBF992" Created="2016-07-19 10:17:55 -0700" Modified="2016-07-19 10:17:58 -0700" Type="Folder">
+                    <Title>Roads Digitizing</Title>
                     <MetaData>
                         <IncludeInCompile>Yes</IncludeInCompile>
                     </MetaData>
@@ -173,8 +238,8 @@
                         <Target Type="Words">0</Target>
                     </TextSettings>
                 </BinderItem>
-                <BinderItem ID="14" UUID="AC5B0B2A-586B-4A36-89B4-AEBB838DC859" Created="2016-07-19 10:17:31 -0700" Modified="2016-07-19 10:17:31 -0700" Type="Text">
-                    <Title></Title>
+                <BinderItem ID="10" UUID="435AF270-7A88-40E5-A9A1-7608D145C370" Created="2016-07-19 10:16:37 -0700" Modified="2016-07-19 10:16:47 -0700" Type="Text">
+                    <Title>Load data in raw for preprocessing</Title>
                     <MetaData>
                         <IncludeInCompile>Yes</IncludeInCompile>
                     </MetaData>
@@ -182,8 +247,127 @@
                         <Target Type="Words">0</Target>
                     </TextSettings>
                 </BinderItem>
-                <BinderItem ID="3" UUID="52824E01-6725-4658-9C00-8307883784C1" Created="2016-07-19 10:12:51 -0700" Modified="2016-07-19 10:12:51 -0700" Type="Text">
-                    <Title></Title>
+                <BinderItem ID="23" UUID="20B06C38-52D7-47D2-B6E4-79B3409E9BBE" Created="2016-08-02 07:21:15 -0700" Modified="2016-08-02 07:21:20 -0700" Type="Folder">
+                    <Title>Distance Rasters</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                    <Children>
+                        <BinderItem ID="21" UUID="A29EE609-6126-482B-A66D-2BF791C241E4" Created="2016-08-02 07:20:45 -0700" Modified="2016-08-02 07:21:31 -0700" Type="Text">
+                            <Title>Original location</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="22" UUID="D3F2CF31-CBF1-436D-93B1-2908FD9A5EE5" Created="2016-08-02 07:21:02 -0700" Modified="2016-08-02 07:55:00 -0700" Type="Text">
+                            <Title>Rivers of different sizes</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="24" UUID="6CEC71AC-DD6A-43F0-A002-10EB5D81EC51" Created="2016-08-02 07:55:05 -0700" Modified="2016-08-02 07:55:13 -0700" Type="Text">
+                            <Title>Major Roads</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="25" UUID="2DA9A0DD-A09E-4B44-80D4-60BF4F1100F5" Created="2016-08-02 07:55:17 -0700" Modified="2016-08-02 07:55:41 -0700" Type="Text">
+                            <Title>Protected Areas</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                        <BinderItem ID="28" UUID="B760F448-6EE9-48F8-B2CA-5AF27090D1C7" Created="2016-08-02 07:56:06 -0700" Modified="2016-08-02 07:56:09 -0700" Type="Text">
+                            <Title>100 Year Floodplain</Title>
+                            <MetaData>
+                                <IncludeInCompile>Yes</IncludeInCompile>
+                            </MetaData>
+                            <TextSettings>
+                                <Target Type="Words">0</Target>
+                            </TextSettings>
+                        </BinderItem>
+                    </Children>
+                </BinderItem>
+                <BinderItem ID="26" UUID="B7799620-6BA4-4E46-9AB8-86B39890216A" Created="2016-08-02 07:55:46 -0700" Modified="2016-08-02 07:55:50 -0700" Type="Text">
+                    <Title>Elevation</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+                <BinderItem ID="27" UUID="2C46B89C-941C-4128-A582-294215A29FAB" Created="2016-08-02 07:55:57 -0700" Modified="2016-08-02 07:55:58 -0700" Type="Text">
+                    <Title>Slope</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+                <BinderItem ID="29" UUID="103593E7-6112-43C0-A051-B7F9CFB57ED3" Created="2016-08-02 08:01:39 -0700" Modified="2016-08-02 08:01:42 -0700" Type="Text">
+                    <Title>Correct Side of River</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+                <BinderItem ID="30" UUID="649708C7-72B4-4A79-AA80-241B7AEE4D8A" Created="2016-08-02 08:01:55 -0700" Modified="2016-08-02 08:01:56 -0700" Type="Text">
+                    <Title>Chosen</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+                <BinderItem ID="20" UUID="247B25E2-F243-4497-B664-42487B845171" Created="2016-07-19 10:18:55 -0700" Modified="2016-08-05 14:26:08 -0700" Type="Text">
+                    <Title>Min Max Mean</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+                <BinderItem ID="11" UUID="EA8811B4-8FEB-4F1E-8380-90D6FB3FC333" Created="2016-07-19 10:16:53 -0700" Modified="2016-07-19 10:16:58 -0700" Type="Text">
+                    <Title>Model Processing</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+                <BinderItem ID="32" UUID="014B3A30-C9CB-4BFD-ACD7-D598D2C57C15" Created="2016-08-02 08:09:44 -0700" Modified="2016-08-02 08:09:48 -0700" Type="Text">
+                    <Title>Overprediction Minimal</Title>
+                    <MetaData>
+                        <IncludeInCompile>Yes</IncludeInCompile>
+                    </MetaData>
+                    <TextSettings>
+                        <Target Type="Words">0</Target>
+                    </TextSettings>
+                </BinderItem>
+                <BinderItem ID="7" UUID="ADA23CB9-0287-4973-A6F5-80285BAE50AF" Created="2016-07-19 10:16:12 -0700" Modified="2016-07-19 10:16:14 -0700" Type="Folder">
+                    <Title>Model Results</Title>
                     <MetaData>
                         <IncludeInCompile>Yes</IncludeInCompile>
                     </MetaData>
@@ -219,7 +403,7 @@
     <ProjectTargets>
         <DraftTarget Type="Words" CountIncludedOnly="No" CurrentCompileGroupOnly="No">0</DraftTarget>
         <SessionTarget Type="Words" CountDraftOnly="No" AllowNegatives="No" ResetType="Midnight" DeterminedFromDeadline="No" CanWriteOnDeadlineDate="No" WritingDays="">0</SessionTarget>
-        <PreviousSession Words="0" Characters="0" Date="2016-07-28 11:34:49 -0700"/>
+        <PreviousSession Words="2173" Characters="13514" Date="2016-08-03 10:26:25 -0700"/>
     </ProjectTargets>
     <Collections>
         <Collection Type="Binder" ID="6ABBFD11-8D79-4B81-A664-9C59D4D76300" Color="0.901961 0.917647 0.933333">
