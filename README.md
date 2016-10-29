@@ -1,3 +1,5 @@
+[![Code Issues](https://www.quantifiedcode.com/api/v1/project/0ea3164cfdde464d89f2dba4fc5fa27b/badge.svg)](https://www.quantifiedcode.com/app/project/0ea3164cfdde464d89f2dba4fc5fa27b)
+
 Installation Instructions
 =======================================================
 
