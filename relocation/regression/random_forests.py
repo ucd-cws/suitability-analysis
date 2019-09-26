@@ -189,7 +189,7 @@ class ModelRunner(object):
 		for value in sorted_keys:
 			processing_log.info("{}: {}".format(features_and_values[value], value))
 
-	def run_many(self, num_iterations=50):
+	def run_many(self, num_iterations=50, withhold=.1):
 		validator = Validation()
 
 		if not self._data.any():
@@ -198,7 +198,7 @@ class ModelRunner(object):
 		for iteration in range(num_iterations):
 			processing_log.info("Iteration {}".format(iteration))
 			self.reshuffle()
-			self.withhold_and_fit_model(withhold=.1)
+			self.withhold_and_fit_model(withhold=withhold)
 
 			self.total_y_trues = np.count_nonzero(self.withheld_truth)
 			self.validate()
