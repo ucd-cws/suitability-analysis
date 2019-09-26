@@ -1,7 +1,26 @@
-[![Code Issues](https://www.quantifiedcode.com/api/v1/project/0ea3164cfdde464d89f2dba4fc5fa27b/badge.svg)](https://www.quantifiedcode.com/app/project/0ea3164cfdde464d89f2dba4fc5fa27b)
+# Suitability Analysis for Relocation
 
-Installation Instructions
-=======================================================
+## Installation Instructions
+Here is a quick overview of how to install and work with this code
+
+1. Install ArcGIS Pro 2.3+ (version needed for advanced conda package management)
+2. Clone this repository to your desired location
+3. Copy FloodMitigation/local_settings_template.py to local_settings.py and configure parameters in local_settings.py as needed.
+4. Set up a conda environment within ArcGIS Pro. [ArcGIS' documentation](https://pro.arcgis.com/en/pro-app/arcpy/get-started/installing-python-for-arcgis-pro.htm)
+ includes the best way to handle this, but in brief:
+    1. Open ArcGIS Pro
+    2. Go to Settings, then switch to the Python tab
+    3. Clone the default conda environment
+    4. Activate the new environment and restart ArcGIS Pro
+5. Install dependencies within the new conda environment:
+    1. `Django`
+    2. `scikit-learn`
+    3. `arrow`
+6. Create a new scratch geodatabase (may need to happen by default - Nick to flesh out)
+7. Can now load data and run the model (see functions in `relocation/management/load.py`)
+
+
+## Installation Instructions for ArcGIS Pro 1.x
 
 1. Install ArcGis Pro, log in, and upgrade to version 1.3
 
