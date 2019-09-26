@@ -1,0 +1,418 @@
+INFO --REPORT-- --100 Runs--
+INFO Average Number of Records per run: 200496.0
+INFO Average Number Withheld per run: 20049.0
+INFO Average Corrects per run: 20013.3625
+INFO Average Incorrects per run: 35.6375
+INFO Average Overpredicts per run: 4.2
+INFO Average Underpedicts per run: 31.4375
+INFO Average Y Trues per run: 59.5625
+INFO Average Proportion Underpredicts for Y per run: 0.526178803929086
+INFO Average Total Proportion Correct per run: 0.09981926073338121
+INFO Average Importance for stat_centroid_distance_to_original_boundary: 0.23553640582130847
+INFO Average Importance for stat_max_protected_distance: 0.04813918909300722
+INFO Average Importance for stat_min_rivers_distance_UA_10000: 0.02468589217894104
+INFO Average Importance for stat_max_rivers_distance_UA_10000: 0.021268658817972384
+INFO Average Importance for stat_min_rivers_distance_UA_0: 0.02989912711539357
+INFO Average Importance for stat_min_elevation: 0.07332789679977571
+INFO Average Importance for stat_min_protected_distance: 0.04649383165798482
+INFO Average Importance for stat_max_floodplain_distance: 0.04512791150853011
+INFO Average Importance for stat_max_rivers_distance_UA_1000: 0.04738767418615813
+INFO Average Importance for stat_max_major_road_distance: 0.04050496904912865
+INFO Average Importance for stat_centroid_elevation: 0.05959214527285724
+INFO Average Importance for stat_min_floodplain_distance: 0.04296166759597454
+INFO Average Importance for stat_max_rivers_distance_UA_0: 0.04420215636249189
+INFO Average Importance for stat_is_on_correct_side_of_river: 0.01597925772458144
+INFO Average Importance for stat_max_elevation: 0.04555083866576273
+INFO Average Importance for stat_min_slope: 0.0559033035451888
+INFO Average Importance for stat_max_slope: 0.0452310283234392
+INFO Average Importance for stat_min_rivers_distance_UA_1000: 0.0478279391327331
+INFO Average Importance for stat_min_major_road_distance: 0.030380107148770957
+
+In [8]: validator.incorrects
+Out[8]: 
+[56,
+ 28,
+ 45,
+ 39,
+ 31,
+ 32,
+ 39,
+ 32,
+ 38,
+ 37,
+ 33,
+ 37,
+ 46,
+ 29,
+ 30,
+ 34,
+ 37,
+ 38,
+ 33,
+ 35,
+ 28,
+ 40,
+ 40,
+ 28,
+ 35,
+ 31,
+ 37,
+ 31,
+ 40,
+ 37,
+ 36,
+ 29,
+ 39,
+ 36,
+ 34,
+ 32,
+ 37,
+ 40,
+ 44,
+ 26,
+ 40,
+ 33,
+ 40,
+ 39,
+ 28,
+ 30,
+ 34,
+ 42,
+ 38,
+ 44,
+ 30,
+ 26,
+ 43,
+ 43,
+ 25,
+ 40,
+ 35,
+ 35,
+ 50,
+ 27,
+ 36,
+ 37,
+ 43,
+ 30,
+ 49,
+ 30,
+ 27,
+ 47,
+ 36,
+ 18,
+ 42,
+ 31,
+ 34,
+ 39,
+ 42,
+ 40,
+ 31,
+ 21,
+ 33,
+ 36,
+ 35,
+ 38,
+ 29,
+ 43,
+ 40,
+ 23,
+ 39,
+ 41,
+ 46,
+ 33,
+ 45,
+ 34,
+ 39,
+ 23,
+ 26,
+ 45,
+ 40,
+ 34,
+ 35,
+ 35,
+ 26,
+ 38,
+ 41,
+ 35,
+ 37,
+ 26,
+ 39,
+ 35,
+ 24,
+ 36,
+ 24,
+ 38,
+ 19,
+ 36,
+ 28,
+ 52,
+ 34,
+ 43,
+ 50,
+ 35,
+ 45,
+ 39,
+ 34,
+ 48,
+ 49,
+ 35,
+ 39,
+ 38,
+ 32,
+ 35,
+ 35,
+ 37,
+ 35,
+ 39,
+ 34,
+ 42,
+ 32,
+ 41,
+ 33,
+ 39,
+ 38,
+ 31,
+ 37,
+ 32,
+ 19,
+ 36,
+ 26,
+ 33,
+ 29,
+ 37,
+ 40,
+ 35,
+ 29,
+ 45,
+ 30,
+ 37,
+ 22,
+ 36,
+ 40,
+ 37]
+
+In [9]: validator.percent_incorrects
+Out[9]: 
+[0.6144578313253012,
+ 0.42592592592592593,
+ 0.5454545454545454,
+ 0.578125,
+ 0.5,
+ 0.5217391304347826,
+ 0.5538461538461539,
+ 0.47368421052631576,
+ 0.47619047619047616,
+ 0.47761194029850745,
+ 0.5263157894736842,
+ 0.5409836065573771,
+ 0.5616438356164384,
+ 0.44680851063829785,
+ 0.47368421052631576,
+ 0.48333333333333334,
+ 0.5087719298245614,
+ 0.4838709677419355,
+ 0.5178571428571429,
+ 0.4838709677419355,
+ 0.42857142857142855,
+ 0.5483870967741935,
+ 0.5967741935483871,
+ 0.5098039215686274,
+ 0.5087719298245614,
+ 0.5961538461538461,
+ 0.5636363636363636,
+ 0.5576923076923077,
+ 0.5538461538461539,
+ 0.5081967213114754,
+ 0.5245901639344263,
+ 0.54,
+ 0.5806451612903226,
+ 0.5333333333333333,
+ 0.5555555555555556,
+ 0.509090909090909,
+ 0.6153846153846154,
+ 0.5507246376811594,
+ 0.5901639344262295,
+ 0.42105263157894735,
+ 0.5238095238095238,
+ 0.5,
+ 0.6129032258064516,
+ 0.4782608695652174,
+ 0.5,
+ 0.46551724137931033,
+ 0.373134328358209,
+ 0.578125,
+ 0.5454545454545454,
+ 0.6290322580645161,
+ 0.4716981132075472,
+ 0.4074074074074074,
+ 0.5454545454545454,
+ 0.6610169491525424,
+ 0.4375,
+ 0.576271186440678,
+ 0.5,
+ 0.4411764705882353,
+ 0.5526315789473685,
+ 0.4444444444444444,
+ 0.6904761904761905,
+ 0.5344827586206896,
+ 0.5072463768115942,
+ 0.4909090909090909,
+ 0.5774647887323944,
+ 0.49056603773584906,
+ 0.47058823529411764,
+ 0.5324675324675324,
+ 0.5223880597014925,
+ 0.3333333333333333,
+ 0.5967741935483871,
+ 0.4838709677419355,
+ 0.5084745762711864,
+ 0.5588235294117647,
+ 0.582089552238806,
+ 0.6101694915254238,
+ 0.5306122448979592,
+ 0.37777777777777777,
+ 0.58,
+ 0.45161290322580644,
+ 0.47619047619047616,
+ 0.5,
+ 0.45614035087719296,
+ 0.6119402985074627,
+ 0.5483870967741935,
+ 0.4883720930232558,
+ 0.4444444444444444,
+ 0.6610169491525424,
+ 0.589041095890411,
+ 0.5084745762711864,
+ 0.5652173913043478,
+ 0.5079365079365079,
+ 0.5645161290322581,
+ 0.39215686274509803,
+ 0.4,
+ 0.6153846153846154,
+ 0.5,
+ 0.5714285714285714,
+ 0.6078431372549019,
+ 0.5918367346938775,
+ 0.44,
+ 0.631578947368421,
+ 0.5416666666666666,
+ 0.5471698113207547,
+ 0.5423728813559322,
+ 0.4528301886792453,
+ 0.6065573770491803,
+ 0.5490196078431373,
+ 0.4,
+ 0.5272727272727272,
+ 0.43137254901960786,
+ 0.5373134328358209,
+ 0.3469387755102041,
+ 0.546875,
+ 0.43859649122807015,
+ 0.6266666666666667,
+ 0.5254237288135594,
+ 0.59375,
+ 0.6027397260273972,
+ 0.5660377358490566,
+ 0.6323529411764706,
+ 0.5714285714285714,
+ 0.5263157894736842,
+ 0.640625,
+ 0.6290322580645161,
+ 0.5172413793103449,
+ 0.6181818181818182,
+ 0.5666666666666667,
+ 0.47368421052631576,
+ 0.5254237288135594,
+ 0.5076923076923077,
+ 0.578125,
+ 0.723404255319149,
+ 0.5064935064935064,
+ 0.5,
+ 0.5362318840579711,
+ 0.5471698113207547,
+ 0.6981132075471698,
+ 0.5178571428571429,
+ 0.5517241379310345,
+ 0.5079365079365079,
+ 0.5272727272727272,
+ 0.5666666666666667,
+ 0.49056603773584906,
+ 0.27419354838709675,
+ 0.5245901639344263,
+ 0.36065573770491804,
+ 0.4838709677419355,
+ 0.5510204081632653,
+ 0.5,
+ 0.5070422535211268,
+ 0.5769230769230769,
+ 0.52,
+ 0.6470588235294118,
+ 0.43859649122807015,
+ 0.5862068965517241,
+ 0.3958333333333333,
+ 0.5344827586206896,
+ 0.5645161290322581,
+ 0.5483870967741935]
+
+In [10]: min(validator.percent_incorrects)
+Out[10]: 0.27419354838709675
+
+In [11]: max(validator.percent_incorrects)
+Out[11]: 0.723404255319149
+
+In [12]: import numpy
+
+In [13]: numpy.histogram(validator.percent_incorrects, range(0,100,10))
+Out[13]: 
+(array([160,   0,   0,   0,   0,   0,   0,   0,   0]),
+ array([ 0, 10, 20, 30, 40, 50, 60, 70, 80, 90]))
+
+In [14]: numpy.histogram(validator.percent_incorrects, 'auto')
+---------------------------------------------------------------------------
+IndexError                                Traceback (most recent call last)
+<ipython-input-14-98afc0419038> in <module>()
+----> 1 numpy.histogram(validator.percent_incorrects, 'auto')
+
+C:\Program Files\ArcGIS\Pro\bin\Python\envs\flood\lib\site-packages\numpy\lib\function_base.py in histogram(a, bins, range, normed, weights, density)
+    193     else:
+    194         bins = asarray(bins)
+--> 195         if (np.diff(bins) < 0).any():
+    196             raise AttributeError(
+    197                 'bins must increase monotonically.')
+
+C:\Program Files\ArcGIS\Pro\bin\Python\envs\flood\lib\site-packages\numpy\lib\function_base.py in diff(a, n, axis)
+   1105     slice1 = [slice(None)]*nd
+   1106     slice2 = [slice(None)]*nd
+-> 1107     slice1[axis] = slice(1, None)
+   1108     slice2[axis] = slice(None, -1)
+   1109     slice1 = tuple(slice1)
+
+IndexError: list assignment index out of range
+
+In [15]: numpy.histogram(validator.percent_incorrects, 10))
+  File "<ipython-input-15-875353b7d62a>", line 1
+    numpy.histogram(validator.percent_incorrects, 10))
+                                                     ^
+SyntaxError: invalid syntax
+
+
+In [16]: numpy.histogram(validator.percent_incorrects, 10)
+Out[16]:
+(array([ 1,  3,  7, 14, 20, 47, 39, 22,  4,  3]),
+ array([ 0.27419355,  0.31911462,  0.36403569,  0.40895676,  0.45387783,
+         0.4987989 ,  0.54371997,  0.58864104,  0.63356211,  0.67848318,
+         0.72340426]))
+
+In [17]: numpy.histogram(validator.percent_incorrects, range(0,1,.1))
+---------------------------------------------------------------------------
+TypeError                                 Traceback (most recent call last)
+<ipython-input-17-d058d7179ed2> in <module>()
+----> 1 numpy.histogram(validator.percent_incorrects, range(0,1,.1))
+
+TypeError: 'float' object cannot be interpreted as an integer
+
+In [18]: numpy.histogram(validator.percent_incorrects, 7)
+Out[18]:
+(array([ 2,  8, 17, 55, 53, 20,  5]),
+ array([ 0.27419355,  0.33836651,  0.40253946,  0.46671242,  0.53088538,
+         0.59505834,  0.6592313 ,  0.72340426]))
