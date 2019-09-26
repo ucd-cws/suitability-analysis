@@ -17,7 +17,9 @@ Here is a quick overview of how to install and work with this code
     2. `scikit-learn`
     3. `arrow`
 6. Create a new scratch geodatabase (may need to happen by default - Nick to flesh out)
-7. Can now load data and run the model (see functions in `relocation/management/load.py`)
+7. Run `python manage.py migrate` from the command line with the appropriate conda environment activated (or use the path
+ to `propy` instead of calling `python`). This will create and populate the local data structures.
+8. Can now load data and run the model (see functions in `relocation/management/load.py`)
 
 
 ## Installation Instructions for ArcGIS Pro 1.x
