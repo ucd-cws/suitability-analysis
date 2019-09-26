@@ -13,17 +13,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 
-from FloodMitigation.secrets import SECRET_KEY
-
-from FloodMitigation import local_settings
-from FloodMitigation import gis
-
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-GEOSPATIAL_DIRECTORY = os.path.join(BASE_DIR, "geospatial_analysis")
-REGIONS_DIRECTORY = os.path.join(BASE_DIR, "regions")
-LOCATIONS_DIRECTORY = os.path.join(BASE_DIR, "locations")
+from FloodMitigation.local_settings import *
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
@@ -32,10 +22,6 @@ LOCATIONS_DIRECTORY = os.path.join(BASE_DIR, "locations")
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
-# a code to use when looking up spatial references for web conversion - encodes for WGS 1984 and is accessed with arcpy.SpatialReference(REPROJECTION_ID)
-REPROJECTION_ID = 4326
-CHOSEN_FIELD = "chosen"
 
 # Application definition
 
@@ -80,18 +66,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'FloodMitigation.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/1.8/ref/settings/#databases
-
-DATABASES = {
-	'default': {
-		'ENGINE': 'django.db.backends.sqlite3',
-		'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-	}
-}
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/

@@ -5,7 +5,28 @@ from FloodMitigation import gis
 
 processing_log = logging.getLogger("processing_log")
 
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = ''   # Make this a cryptographically secure value!
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Database
+# https://docs.djangoproject.com/en/1.8/ref/settings/#databases
+
+DATABASES = {
+	'default': {
+		'ENGINE': 'django.db.backends.sqlite3',
+		'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+	}
+}
+
+GEOSPATIAL_DIRECTORY = os.path.join(BASE_DIR, "geospatial_analysis")
+REGIONS_DIRECTORY = os.path.join(BASE_DIR, "regions")
+LOCATIONS_DIRECTORY = os.path.join(BASE_DIR, "locations")
+
+# a code to use when looking up spatial references for web conversion - encodes for WGS 1984 and is accessed with arcpy.SpatialReference(REPROJECTION_ID)
+REPROJECTION_ID = 4326
+CHOSEN_FIELD = "chosen"  # what field name should be used to identify parcels that are selected for relocation?
 
 SCRATCH_GDB = os.path.join(BASE_DIR, "scratch", "scratch.gdb")
 
